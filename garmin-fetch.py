@@ -674,7 +674,7 @@ def fetch_write_bulk(start_date_str, end_date_str):
         while repeat_loop:
             try:
                 daily_fetch_write(current_date)
-                logging.info(f"Success : Fetched all available health matries for date {current_date} (skipped any if unavailable)")
+                logging.info(f"Success : Fetched all available health metrics for date {current_date} (skipped any if unavailable)")
                 logging.info(f"Waiting : for {RATE_LIMIT_CALLS_SECONDS} seconds")
                 time.sleep(RATE_LIMIT_CALLS_SECONDS)
                 repeat_loop = False
@@ -710,7 +710,7 @@ garmin_obj = garmin_login()
 # %%
 if MANUAL_START_DATE:
     fetch_write_bulk(MANUAL_START_DATE, MANUAL_END_DATE)
-    logging.info(f"Bulk update success : Fetched all available health matries for date range {MANUAL_START_DATE} to {MANUAL_END_DATE}")
+    logging.info(f"Bulk update success : Fetched all available health metrics for date range {MANUAL_START_DATE} to {MANUAL_END_DATE}")
     exit(0)
 else:
     try:
