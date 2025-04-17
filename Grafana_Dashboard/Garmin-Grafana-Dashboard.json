@@ -2138,24 +2138,6 @@
               ]
             }
           }
-        },
-        {
-          "id": "filterByValue",
-          "options": {
-            "filters": [
-              {
-                "config": {
-                  "id": "greater",
-                  "options": {
-                    "value": 0
-                  }
-                },
-                "fieldName": "Sleeping SpO2"
-              }
-            ],
-            "match": "any",
-            "type": "include"
-          }
         }
       ],
       "transparent": true,
