@@ -2110,31 +2110,14 @@
           }
         },
         {
-          "id": "calculateField",
-          "options": {
-            "alias": "Sleeping SpO2",
-            "mode": "windowFunctions",
-            "reduce": {
-              "reducer": "sum"
-            },
-            "window": {
-              "field": "SpO2",
-              "reducer": "mean",
-              "windowAlignment": "centered",
-              "windowSize": 0.005,
-              "windowSizeMode": "percentage"
-            }
-          }
-        },
-        {
           "id": "filterFieldsByName",
           "options": {
             "include": {
               "names": [
                 "Time",
-                "Sleeping HR",
-                "Sleeping SpO2",
-                "HRV"
+                "SpO2",
+                "HRV",
+                "Sleeping HR"
               ]
             }
           }
@@ -9653,6 +9636,6 @@
   "timezone": "browser",
   "title": "Garmin Stats",
   "uid": "feiibsx498gsgb",
-  "version": 98,
+  "version": 99,
   "weekStart": ""
 }
