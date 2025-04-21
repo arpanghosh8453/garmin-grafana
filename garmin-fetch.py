@@ -202,7 +202,7 @@ def get_daily_stats(date_str):
             }
         })
         if points_list:
-            logging.info(f"Success : Fetching daily matrices for date {date_str}")
+            logging.info(f"Success : Fetching daily metrics for date {date_str}")
         return points_list
     else:
         logging.debug("No daily stat data available for the give date " + date_str)
@@ -394,7 +394,7 @@ def get_sleep_data(date_str):
                     }
                 })
     if points_list:
-        logging.info(f"Success : Fetching intraday sleep matrices for date {date_str}")
+        logging.info(f"Success : Fetching intraday sleep metrics for date {date_str}")
     return points_list
 
 # %%
@@ -850,7 +850,7 @@ def fetch_write_bulk(start_date_str, end_date_str):
                 repeat_loop = False
             except GarminConnectTooManyRequestsError as err:
                 logging.error(err)
-                logging.info(f"Too many requests (429) : Failed to fetch one or more matrices - will retry for date {current_date}")
+                logging.info(f"Too many requests (429) : Failed to fetch one or more metrics - will retry for date {current_date}")
                 logging.info(f"Waiting : for {FETCH_FAILED_WAIT_SECONDS} seconds")
                 time.sleep(FETCH_FAILED_WAIT_SECONDS)
                 repeat_loop = True
@@ -862,7 +862,7 @@ def fetch_write_bulk(start_date_str, end_date_str):
                     GarthHTTPError
                     ) as err:
                 logging.error(err)
-                logging.info(f"Connection Error : Failed to fetch one or more matrices - skipping date {current_date}")
+                logging.info(f"Connection Error : Failed to fetch one or more metrics - skipping date {current_date}")
                 logging.info(f"Waiting : for {RATE_LIMIT_CALLS_SECONDS} seconds")
                 time.sleep(RATE_LIMIT_CALLS_SECONDS)
                 repeat_loop = False

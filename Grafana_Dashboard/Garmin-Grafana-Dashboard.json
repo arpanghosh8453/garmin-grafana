@@ -7352,7 +7352,7 @@
           "tags": []
         }
       ],
-      "title": "Daily avg health matrices",
+      "title": "Daily avg health metrics",
       "type": "timeseries"
     },
     {
@@ -7659,7 +7659,7 @@
           "tags": []
         }
       ],
-      "title": "Daily avg health matrices ",
+      "title": "Daily avg health metrics ",
       "type": "timeseries"
     },
     {
