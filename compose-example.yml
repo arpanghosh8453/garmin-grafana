@@ -14,6 +14,7 @@ services:
       - INFLUXDB_PASSWORD=influxdb_secret_password
       - INFLUXDB_DATABASE=GarminStats
       - UPDATE_INTERVAL_SECONDS=300
+      #- USER_TIMEZONE=UTC-5 # optional, use if you are living in UTC-X time zones
       - LOG_LEVEL=INFO
 
   influxdb:
