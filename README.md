@@ -54,6 +54,8 @@ If you are a **Fitbit user**, please check out the [sister project](https://gith
 
 9. In the Grafana dashboard, the heatmap panels require an additional plugin you must install. This can be done by using the `GF_PLUGINS_PREINSTALL=marcusolsson-hourly-heatmap-panel` environment variable like in the [compose-example.yml](./compose-example.yml) file, or after the creation of the container very easily with docker commands. Just run `docker exec -it grafana grafana cli plugins install marcusolsson-hourly-heatmap-panel` and then run `docker restart grafana` to apply that plugin update. Now, you should be able to see the Heatmap panels on the dashboard loading successfully.
 
+10. If you are in mainland China and use Garmin-cn account you need to set `GARMINCONNECT_IS_CN=True`
+
 ---
 
 This project is made for InfluxDB 1.11, as Flux queries on influxDB 2.x can be problematic to use with Grafana at times. In fact, InfluxQL is being reintroduced in InfluxDB 3.0, reflecting user feedback. Grafana also has better compatibility/stability with InfluxQL from InfluxDB 1.11. Moreover, there are statistical evidence that Influxdb 1.11 queries run faster compared to influxdb 2.x. Since InfluxDB 2.x offers no clear benefits for this project, there are no plans for a migration.
@@ -78,6 +80,7 @@ services:
       - INFLUXDB_DATABASE=GarminStats
       - GARMINCONNECT_EMAIL=your_garminconnect_email # optional, read the setup docs
       - GARMINCONNECT_BASE64_PASSWORD=your_base64_encoded_garminconnect_password # optional, must be Base64 encoded, read setup docs
+      - GARMINCONNECT_IS_CN=if_you_are_using_chinese_account
       - UPDATE_INTERVAL_SECONDS=300 # Default update check interval is set to 5 minutes
       - LOG_LEVEL=INFO # change to DEBUG to get DEBUG logs
 

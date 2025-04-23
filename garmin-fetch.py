@@ -39,6 +39,7 @@ INFLUXDB_DATABASE = os.getenv("INFLUXDB_DATABASE", 'GarminStats') # Required
 TOKEN_DIR = os.getenv("TOKEN_DIR", "~/.garminconnect") # optional
 GARMINCONNECT_EMAIL = os.environ.get("GARMINCONNECT_EMAIL", None) # optional, asks in prompt on run if not provided
 GARMINCONNECT_PASSWORD = base64.b64decode(os.getenv("GARMINCONNECT_BASE64_PASSWORD")).decode("utf-8") if os.getenv("GARMINCONNECT_BASE64_PASSWORD") != None else None # optional, asks in prompt on run if not provided
+GARMINCONNECT_IS_CN = True if os.getenv("GARMINCONNECT_IS_CN") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional if you are using a Chinese account
 GARMIN_DEVICENAME = os.getenv("GARMIN_DEVICENAME", "Unknown")  # optional, attepmts to set the same automatically if not given
 AUTO_DATE_RANGE = False if os.getenv("AUTO_DATE_RANGE") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional
 MANUAL_START_DATE = os.getenv("MANUAL_START_DATE", None) # optional, in YYYY-MM-DD format, if you want to bulk update only from specific date
@@ -106,7 +107,7 @@ def garmin_login():
             user_email = GARMINCONNECT_EMAIL or input("Enter Garminconnect Login e-mail: ")
             user_password = GARMINCONNECT_PASSWORD or input("Enter Garminconnect password (characters will be visible): ")
             garmin = Garmin(
-                email=user_email, password=user_password, is_cn=False, return_on_mfa=True
+                email=user_email, password=user_password, is_cn=GARMINCONNECT_IS_CN, return_on_mfa=True
             )
             result1, result2 = garmin.login()
             if result1 == "needs_mfa":  # MFA is required
