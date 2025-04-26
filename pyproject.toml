@@ -1,0 +1,13 @@
+[project]
+name = "garmin-grafana"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "dotenv>=0.9.9",
+    "fitparse>=1.2.0",
+    "garminconnect>=0.2.26",
+    "influxdb>=5.3.2",
+    "influxdb3-python>=0.12.0",
+]

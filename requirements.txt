@@ -1,8 +1,0 @@
-influxdb>=5.3
-pytz>=2025.1
-Requests>=2.32
-garth>=0.5.3
-garminconnect>=0.2.26
-dotenv>=0.9.9
-fitparse>=1.2.0
-influxdb3-python>=0.12.0
