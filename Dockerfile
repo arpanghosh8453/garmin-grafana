@@ -5,9 +5,9 @@ ENV PYTHONUNBUFFERED=1
 
 RUN apt update && apt install build-essential -y
 
-ADD garmin-fetch.py /app/
-ADD pyproject.toml /app/
-ADD uv.lock /app/
+COPY garmin-fetch.py /app/
+COPY pyproject.toml /app/
+COPY uv.lock /app/
 
 WORKDIR /app
 RUN uv sync --locked
