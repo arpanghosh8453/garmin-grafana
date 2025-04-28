@@ -317,7 +317,7 @@ This project is made possible by **generous community contribution** towards the
 
 - [python-garminconnect](https://github.com/cyberjunky/python-garminconnect) by [cyberjunky](https://github.com/cyberjunky) : Garmin Web API wrapper
 
-- [garth](https://github.com/matin/garth) by [martin](https://github.com/matin) : Used for Garmin SSO Authentication
+- [garth](https://github.com/matin/garth) by [matin](https://github.com/matin) : Used for Garmin SSO Authentication
 
 ## Limitations
 
