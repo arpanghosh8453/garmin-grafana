@@ -45,7 +45,7 @@ This script just requires a linux environment. If Docker is not installed on you
 Detailed steps for Windows users are as follows:
 
 - Install docker desktop (https://docs.docker.com/get-started/introduction/get-docker-desktop/)
-- Install WSL and ubuntu from the Micorosft store
+- Install WSL and Ubuntu from the Micorosft store
 - Start->Run then enter: WSL.exe.  Follow the prompts to create your Linux sudo (admin) user
 - Open docker desktop to agree to the EULA
 - Reboot
