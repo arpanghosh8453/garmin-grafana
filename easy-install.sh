@@ -24,7 +24,7 @@ fi
 echo "Creating garminconnect-tokens directory..."
 mkdir -p garminconnect-tokens
 
-# echo "Setting ownership of garminconnect-tokens to UID 1000...(matching grafana-data-fetch container's internal user)"
+echo "Setting ownership of garminconnect-tokens to UID 1000...(matching grafana-data-fetch container's internal user)"
 chown -R 1000:1000 garminconnect-tokens || { echo "Permission change failed - you may need to run this as sudo?. Exiting."; exit 1; }
 
 echo "Renaming compose-example.yml to compose.yml..."
