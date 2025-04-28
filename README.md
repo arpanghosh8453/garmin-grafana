@@ -40,7 +40,7 @@ A docker container to fetch data from Garmin servers and store the data in a loc
 > [!IMPORTANT]
 > This script is for initial setup only. if you already have used it or followed the manual setup to deploy this project, you should not run this again once the garminconnect OAuth tokens are saved (first successful data fetch). Please check the `update to new versions` section for upgrading the container(s).  
 
-This script just requires a linux environment. If Docker is not installed on your Linux environment, install following the instrucitons here: https://docs.docker.com/engine/install/.  If you are on `windows` you should consider using [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) to get a linux subsystem up and running. You should be fine with any other system that gives you a linux terminal natively (i.e. Linux VM, Mac etc.)
+This script just requires a linux environment. If Docker is not installed on your Linux environment, install following the instructions here: https://docs.docker.com/engine/install/.  If you are on `windows` you should consider using [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) to get a linux subsystem up and running. You should be fine with any other system that gives you a linux terminal natively (i.e. Linux VM, Mac etc.)
 
 Detailed steps for Windows users are as follows:
 
