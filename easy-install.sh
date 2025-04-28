@@ -24,14 +24,21 @@ fi
 echo "Creating garminconnect-tokens directory..."
 mkdir -p garminconnect-tokens
 
-echo "Setting ownership of garminconnect-tokens to UID 1000...(matching grafana-data-fetch container's internal user)"
+# echo "Setting ownership of garminconnect-tokens to UID 1000...(matching grafana-data-fetch container's internal user)"
 chown -R 1000:1000 garminconnect-tokens || { echo "Permission change failed - you may need to run this as sudo?. Exiting."; exit 1; }
 
 echo "Renaming compose-example.yml to compose.yml..."
 mv compose-example.yml compose.yml
 
 echo "Replacing {DS_GARMIN_STATS} variable with garmin_influxdb in the dashboard JSON..."
-sed -i 's/\${DS_GARMIN_STATS}/garmin_influxdb/g' ./Grafana_Dashboard/Garmin-Grafana-Dashboard.json
+# Check if the OS is macOS (Darwin)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS sed requires an extension for -i, use '' for no backup
+    sed -i '' 's/\${DS_GARMIN_STATS}/garmin_influxdb/g' ./Grafana_Dashboard/Garmin-Grafana-Dashboard.json
+else
+    # Linux sed works without an extension for -i
+    sed -i 's/\${DS_GARMIN_STATS}/garmin_influxdb/g' ./Grafana_Dashboard/Garmin-Grafana-Dashboard.json
+fi
 
 echo "🐳 Pulling the latest thisisarpanghosh/garmin-fetch-data Docker image..."
 docker pull thisisarpanghosh/garmin-fetch-data:latest || { echo "Docker pull failed. Do you have docker installed and can run docker commands?"; exit 1; }
