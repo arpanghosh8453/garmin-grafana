@@ -31,12 +31,9 @@ echo "Renaming compose-example.yml to compose.yml..."
 mv compose-example.yml compose.yml
 
 echo "Replacing {DS_GARMIN_STATS} variable with garmin_influxdb in the dashboard JSON..."
-# Check if the OS is macOS (Darwin)
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS sed requires an extension for -i, use '' for no backup
     sed -i '' 's/\${DS_GARMIN_STATS}/garmin_influxdb/g' ./Grafana_Dashboard/Garmin-Grafana-Dashboard.json
 else
-    # Linux sed works without an extension for -i
     sed -i 's/\${DS_GARMIN_STATS}/garmin_influxdb/g' ./Grafana_Dashboard/Garmin-Grafana-Dashboard.json
 fi
 
