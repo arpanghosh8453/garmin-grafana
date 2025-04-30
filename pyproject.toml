@@ -1,6 +1,6 @@
 [project]
 name = "garmin-grafana"
-version = "0.0.2"
+version = "0.0.3"
 description = "A Python application to fetch Garmin health data and populate it in an InfluxDB Database, for visualizing long term health trends with Grafana"
 readme = "README.md"
 requires-python = "==3.13.*"
