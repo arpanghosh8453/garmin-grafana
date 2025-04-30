@@ -990,12 +990,12 @@ else:
         logging.warning("No previously synced data found in local InfluxDB database, defaulting to 7 day initial fetching. Use specific start date ENV variable to bulk update past data")
         last_influxdb_sync_time_UTC = (datetime.today() - timedelta(days=7)).astimezone(pytz.timezone("UTC"))
     try:
-        last_activity_dict = garmin_obj.get_last_activity() # (very unlineky event that this will be empty given Garmin's userbase, everyone should have at least one activity)
         if USER_TIMEZONE: # If provided by user, using that. 
             local_timediff = pytz.timezone(USER_TIMEZONE).localize(datetime.utcnow()).utcoffset()
         else: # otherwise try to set automatically
+            last_activity_dict = garmin_obj.get_last_activity() # (very unlineky event that this will be empty given Garmin's userbase, everyone should have at least one activity)
             local_timediff = datetime.strptime(last_activity_dict['startTimeLocal'], '%Y-%m-%d %H:%M:%S') - datetime.strptime(last_activity_dict['startTimeGMT'], '%Y-%m-%d %H:%M:%S')
-        if datetime.strptime(last_activity_dict['startTimeLocal'], '%Y-%m-%d %H:%M:%S') > datetime.strptime(last_activity_dict['startTimeGMT'], '%Y-%m-%d %H:%M:%S'):
+        if local_timediff > timedelta(0):
             logging.info("Using user's local timezone as UTC+" + str(local_timediff))
         else:
             logging.info("Using user's local timezone as UTC-" + str(-local_timediff))
