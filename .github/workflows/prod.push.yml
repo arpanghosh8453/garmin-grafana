@@ -5,7 +5,8 @@ on:
     branches:
       - main
     paths:
-      - 'garmin-fetch.py'
+      - 'src/garmin_grafana/garmin_fetch.py'
+      - 'src/garmin_grafana/__init__.py'
       - 'compose-example.yml'
       - 'pyproject.toml'
       - 'Dockerfile'
