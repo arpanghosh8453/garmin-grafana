@@ -995,7 +995,7 @@ else:
         else: # otherwise try to set automatically
             last_activity_dict = garmin_obj.get_last_activity() # (very unlineky event that this will be empty given Garmin's userbase, everyone should have at least one activity)
             local_timediff = datetime.strptime(last_activity_dict['startTimeLocal'], '%Y-%m-%d %H:%M:%S') - datetime.strptime(last_activity_dict['startTimeGMT'], '%Y-%m-%d %H:%M:%S')
-        if local_timediff > timedelta(0):
+        if local_timediff >= timedelta(0):
             logging.info("Using user's local timezone as UTC+" + str(local_timediff))
         else:
             logging.info("Using user's local timezone as UTC-" + str(-local_timediff))
