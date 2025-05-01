@@ -242,7 +242,7 @@ BACKUP_DIR="./influxdb_backups/$TIMESTAMP"
 mkdir -p "$BACKUP_DIR"
 docker exec influxdb influxd backup -portable -db GarminStats /tmp/influxdb_backup
 docker cp influxdb:/tmp/influxdb_backup "$BACKUP_DIR"
-docker exec influxdb rm -r /tmp/influxdb_backup"
+docker exec influxdb rm -r "/tmp/influxdb_backup"
 ```
 
 The above bash script would create a folder named `influxdb_backups` inside your current working directory and create a subfolder under it with current date-time. Then it will create the backup for `GarminStats` database and copy the backup files to that location. 
