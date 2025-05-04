@@ -7970,7 +7970,8 @@
           "calcs": [
             "min",
             "max",
-            "mean"
+            "mean",
+            "last"
           ],
           "displayMode": "table",
           "placement": "bottom",
