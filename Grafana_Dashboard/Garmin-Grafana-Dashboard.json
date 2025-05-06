@@ -5913,7 +5913,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "velocitykms"
+                "value": "velocitykm"
               },
               {
                 "id": "color",
