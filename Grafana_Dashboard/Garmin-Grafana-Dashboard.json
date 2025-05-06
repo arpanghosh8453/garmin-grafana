@@ -5913,7 +5913,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "velocityms"
+                "value": "velocitykms"
               },
               {
                 "id": "color",
@@ -6089,10 +6089,16 @@
           "select": [
             [
               {
+                "type": "field",
                 "params": [
                   "maxSpeed"
-                ],
-                "type": "field"
+                ]
+              },
+              {
+                "type": "math",
+                "params": [
+                  " * 3.6"
+                ]
               }
             ]
           ],
