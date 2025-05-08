@@ -13612,6 +13612,11 @@
             "value": "Europe/Budapest"
           },
           {
+            "selected": true,
+            "text": "Europe/London",
+            "value": "Europe/London"
+          },
+          {
             "selected": false,
             "text": "America/Toronto",
             "value": "America/Toronto"
