@@ -691,7 +691,7 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                     fitfile = FitFile(fit_file_buffer)
                     fitfile.parse()
                     all_records_list = [record.get_values() for record in fitfile.get_messages('record')]
-                    all_session_list = [record.get_values() for record in fitfile.get_messages('session')]
+                    all_sessions_list = [record.get_values() for record in fitfile.get_messages('session')]
                     all_lengths_list = [record.get_values() for record in fitfile.get_messages('length')]
                     all_laps_list = [record.get_values() for record in fitfile.get_messages('lap')]
                     if len(all_records_list) == 0:
@@ -727,10 +727,10 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                 }
                             }
                             points_list.append(point)
-                    for session_record in all_session_list:
+                    for session_record in all_sessions_list:
                         if session_record.get('start_time') or session_record.get('timestamp'):
                             point = {
-                                "measurement": "SessionRecord",
+                                "measurement": "ActivitySession",
                                 "time": session_record['start_time'].replace(tzinfo=pytz.UTC).isoformat() or session_record['timestamp'].replace(tzinfo=pytz.UTC).isoformat(), 
                                 "tags": {
                                     "Device": GARMIN_DEVICENAME,
