@@ -307,8 +307,6 @@ If you find this project helpful, please consider:
 ☕ [Buying me a coffee](https://ko-fi.com/A0A84F3DP) if you'd like to contribute to its maintenance and future development.
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/A0A84F3DP)
-<a href="https://www.buymeacoffee.com/arpandesign"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=✌️&slug=arpandesign&button_colour=5F7FFF&font_colour=ffffff&font_family=Inter&outline_colour=000000&coffee_colour=FFDD00" width=200 height=32 alt="Buy me a coffee"/></a>
-<noscript><a href="https://liberapay.com/arpandesign/donate"><img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg"></a></noscript>
 
 ## Need Help?
 
