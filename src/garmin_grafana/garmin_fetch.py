@@ -585,6 +585,8 @@ def get_body_composition(date_str):
                     "bmi": weight_dict.get("bmi"),
                     "bodyFat": weight_dict.get("bodyFat"),
                     "bodyWater": weight_dict.get("bodyWater"),
+                    "boneMass": weight_dict.get("boneMass"),
+                    "muscleMass": weight_dict.get("muscleMass"),
                 }
             if not all(value is None for value in data_fields.values()):
                 points_list.append({
