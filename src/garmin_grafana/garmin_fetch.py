@@ -54,7 +54,7 @@ RATE_LIMIT_CALLS_SECONDS = int(os.getenv("RATE_LIMIT_CALLS_SECONDS", 5)) # optio
 INFLUXDB_ENDPOINT_IS_HTTP = False if os.getenv("INFLUXDB_ENDPOINT_IS_HTTP") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional
 GARMIN_DEVICENAME_AUTOMATIC = False if GARMIN_DEVICENAME != "Unknown" else True # optional
 UPDATE_INTERVAL_SECONDS = int(os.getenv("UPDATE_INTERVAL_SECONDS", 300)) # optional
-FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,vo2,activity,race_prediction,body_composition") # additional available values are training_readiness,hill_score,endurance_score,blood_pressure,hydration which you can add to the list seperated by , without any space
+FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,vo2,activity,race_prediction,body_composition") # additional available values are training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration which you can add to the list seperated by , without any space
 KEEP_FIT_FILES = True if os.getenv("KEEP_FIT_FILES") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional
 FIT_FILE_STORAGE_LOCATION = os.getenv("FIT_FILE_STORAGE_LOCATION", os.path.join(os.path.expanduser("~"), "fit_filestore"))
 ALWAYS_PROCESS_FIT_FILES = True if os.getenv("ALWAYS_PROCESS_FIT_FILES") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional, will process all FIT files for all activities including indoor ones lacking GPS data
@@ -888,6 +888,43 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
         PARSED_ACTIVITY_ID_LIST.append(activityID)
     return points_list
 
+def get_training_status(date_str):
+    points_list = []
+    
+    # Fetch the full training status response
+    ts_list_all = garmin_obj.get_training_status(date_str)
+
+    # Adjustment for Nested Dictionary
+    ts_training_data_all = ts_list_all.get("mostRecentTrainingStatus", {}).get("latestTrainingStatusData", {})
+
+    if ts_training_data_all:
+        for device_id, ts_dict in ts_training_data_all.items():
+            print(f"Processing Training Status for Device {device_id}")
+            data_fields = {
+                    "trainingStatus": ts_dict.get("trainingStatus"),
+                    "trainingStatusFeedbackPhrase": ts_dict.get("trainingStatusFeedbackPhrase"),
+                    "weeklyTrainingLoad": ts_dict.get("weeklyTrainingLoad"),
+                    "fitnessTrend": ts_dict.get("fitnessTrend"),
+                    "acwrPercent": ts_dict.get("acuteTrainingLoadDTO", {}).get("acwrPercent"),
+                    "dailyTrainingLoadAcute": ts_dict.get("acuteTrainingLoadDTO", {}).get("dailyTrainingLoadAcute"),
+                    "dailyTrainingLoadChronic": ts_dict.get("acuteTrainingLoadDTO", {}).get("dailyTrainingLoadChronic"),
+                    "maxTrainingLoadChronic": ts_dict.get("acuteTrainingLoadDTO", {}).get("maxTrainingLoadChronic"),
+                    "minTrainingLoadChronic": ts_dict.get("acuteTrainingLoadDTO", {}).get("minTrainingLoadChronic"),
+                    "dailyAcuteChronicWorkloadRatio": ts_dict.get("acuteTrainingLoadDTO", {}).get("dailyAcuteChronicWorkloadRatio"),
+                }
+            if (not all(value is None for value in data_fields.values())) and tr_dict.get('timestamp'):
+                points_list.append({
+                    "measurement": "TrainingStatus",
+                    "time": pytz.timezone("UTC").localize(datetime.strptime(tr_dict['timestamp'],"%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
+                    "tags": {
+                        "Device": GARMIN_DEVICENAME,
+                        "Database_Name": INFLUXDB_DATABASE
+                    },
+                    "fields": data_fields
+                })
+                logging.info(f"Success: Fetching Training Status for date {date_str}")
+    return points_list
+
 # Contribution from PR #17 by @arturgoms 
 def get_training_readiness(date_str):
     points_list = []
@@ -1101,6 +1138,8 @@ def daily_fetch_write(date_str):
         write_points_to_influxdb(get_race_predictions(date_str))
     if 'body_composition' in FETCH_SELECTION:
         write_points_to_influxdb(get_body_composition(date_str))
+    if 'training_status' in FETCH_SELECTION:
+        write_points_to_influxdb(get_training_status(date_str))
     if 'training_readiness' in FETCH_SELECTION:
         write_points_to_influxdb(get_training_readiness(date_str))
     if 'hill_score' in FETCH_SELECTION:
