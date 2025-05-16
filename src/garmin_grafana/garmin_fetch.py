@@ -1,7 +1,7 @@
 # %%
 import base64, requests, time, pytz, logging, os, sys, dotenv, io, zipfile
 from fitparse import FitFile, FitParseError
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from influxdb import InfluxDBClient
 from influxdb.exceptions import InfluxDBClientError
 from influxdb_client_3 import InfluxDBClient3, InfluxDBError
@@ -890,11 +890,7 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
 
 def get_training_status(date_str):
     points_list = []
-
-    # Fetch the full training status response
     ts_list_all = garmin_obj.get_training_status(date_str)
-
-    # Adjusted for nested values
     ts_training_data_all = (ts_list_all.get("mostRecentTrainingStatus") or {}).get("latestTrainingStatusData", {})
 
     if ts_training_data_all:
@@ -915,7 +911,7 @@ def get_training_status(date_str):
             if ts_dict.get("timestamp") and any(value is not None for value in data_fields.values()):
                 points_list.append({
                     "measurement": "TrainingStatus",
-                    "time": datetime.fromtimestamp(ts_dict["timestamp"] / 1000, timezone.utc).isoformat(),
+                    "time": datetime.fromtimestamp(ts_dict["timestamp"]/1000, tz=pytz.timezone("UTC")).isoformat(),
                     "tags": {
                         "Device": GARMIN_DEVICENAME,
                         "Database_Name": INFLUXDB_DATABASE
