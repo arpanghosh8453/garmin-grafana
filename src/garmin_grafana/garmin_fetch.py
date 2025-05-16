@@ -1,7 +1,7 @@
 # %%
 import base64, requests, time, pytz, logging, os, sys, dotenv, io, zipfile
 from fitparse import FitFile, FitParseError
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from influxdb import InfluxDBClient
 from influxdb.exceptions import InfluxDBClientError
 from influxdb_client_3 import InfluxDBClient3, InfluxDBError
@@ -890,39 +890,39 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
 
 def get_training_status(date_str):
     points_list = []
-    
+
     # Fetch the full training status response
     ts_list_all = garmin_obj.get_training_status(date_str)
 
-    # Adjustment for Nested Dictionary
-    ts_training_data_all = ts_list_all.get("mostRecentTrainingStatus", {}).get("latestTrainingStatusData", {})
+    # Adjusted for nested values
+    ts_training_data_all = (ts_list_all.get("mostRecentTrainingStatus") or {}).get("latestTrainingStatusData", {})
 
     if ts_training_data_all:
         for device_id, ts_dict in ts_training_data_all.items():
-            print(f"Processing Training Status for Device {device_id}")
+            logging.info(f"Success : Processing Training Status for Device {device_id}")
             data_fields = {
-                    "trainingStatus": ts_dict.get("trainingStatus"),
-                    "trainingStatusFeedbackPhrase": ts_dict.get("trainingStatusFeedbackPhrase"),
-                    "weeklyTrainingLoad": ts_dict.get("weeklyTrainingLoad"),
-                    "fitnessTrend": ts_dict.get("fitnessTrend"),
-                    "acwrPercent": ts_dict.get("acuteTrainingLoadDTO", {}).get("acwrPercent"),
-                    "dailyTrainingLoadAcute": ts_dict.get("acuteTrainingLoadDTO", {}).get("dailyTrainingLoadAcute"),
-                    "dailyTrainingLoadChronic": ts_dict.get("acuteTrainingLoadDTO", {}).get("dailyTrainingLoadChronic"),
-                    "maxTrainingLoadChronic": ts_dict.get("acuteTrainingLoadDTO", {}).get("maxTrainingLoadChronic"),
-                    "minTrainingLoadChronic": ts_dict.get("acuteTrainingLoadDTO", {}).get("minTrainingLoadChronic"),
-                    "dailyAcuteChronicWorkloadRatio": ts_dict.get("acuteTrainingLoadDTO", {}).get("dailyAcuteChronicWorkloadRatio"),
-                }
-            if (not all(value is None for value in data_fields.values())) and tr_dict.get('timestamp'):
+                "trainingStatus": ts_dict.get("trainingStatus"),
+                "trainingStatusFeedbackPhrase": ts_dict.get("trainingStatusFeedbackPhrase"),
+                "weeklyTrainingLoad": ts_dict.get("weeklyTrainingLoad"),
+                "fitnessTrend": ts_dict.get("fitnessTrend"),
+                "acwrPercent": (ts_dict.get("acuteTrainingLoadDTO") or {}).get("acwrPercent"),
+                "dailyTrainingLoadAcute": (ts_dict.get("acuteTrainingLoadDTO") or {}).get("dailyTrainingLoadAcute"),
+                "dailyTrainingLoadChronic": (ts_dict.get("acuteTrainingLoadDTO") or {}).get("dailyTrainingLoadChronic"),
+                "maxTrainingLoadChronic": (ts_dict.get("acuteTrainingLoadDTO") or {}).get("maxTrainingLoadChronic"),
+                "minTrainingLoadChronic": (ts_dict.get("acuteTrainingLoadDTO") or {}).get("minTrainingLoadChronic"),
+                "dailyAcuteChronicWorkloadRatio": (ts_dict.get("acuteTrainingLoadDTO") or {}).get("dailyAcuteChronicWorkloadRatio"),
+            }
+            if ts_dict.get("timestamp") and any(value is not None for value in data_fields.values()):
                 points_list.append({
                     "measurement": "TrainingStatus",
-                    "time": pytz.timezone("UTC").localize(datetime.strptime(tr_dict['timestamp'],"%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
+                    "time": datetime.fromtimestamp(ts_dict["timestamp"] / 1000, timezone.utc).isoformat(),
                     "tags": {
-                        "Device": GARMIN_DEVICENAME,
+                        "Device": device_id,
                         "Database_Name": INFLUXDB_DATABASE
                     },
                     "fields": data_fields
                 })
-                logging.info(f"Success: Fetching Training Status for date {date_str}")
+                logging.info(f"Success : Fetching Training Status for date {date_str}")
     return points_list
 
 # Contribution from PR #17 by @arturgoms 
