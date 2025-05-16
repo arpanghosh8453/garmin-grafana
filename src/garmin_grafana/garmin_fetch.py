@@ -917,7 +917,7 @@ def get_training_status(date_str):
                     "measurement": "TrainingStatus",
                     "time": datetime.fromtimestamp(ts_dict["timestamp"] / 1000, timezone.utc).isoformat(),
                     "tags": {
-                        "Device": device_id,
+                        "Device": GARMIN_DEVICENAME,
                         "Database_Name": INFLUXDB_DATABASE
                     },
                     "fields": data_fields
