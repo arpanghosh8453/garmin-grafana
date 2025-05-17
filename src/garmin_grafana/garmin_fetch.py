@@ -54,7 +54,7 @@ RATE_LIMIT_CALLS_SECONDS = int(os.getenv("RATE_LIMIT_CALLS_SECONDS", 5)) # optio
 INFLUXDB_ENDPOINT_IS_HTTP = False if os.getenv("INFLUXDB_ENDPOINT_IS_HTTP") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional
 GARMIN_DEVICENAME_AUTOMATIC = False if GARMIN_DEVICENAME != "Unknown" else True # optional
 UPDATE_INTERVAL_SECONDS = int(os.getenv("UPDATE_INTERVAL_SECONDS", 300)) # optional
-FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,vo2,activity,race_prediction,body_composition") # additional available values are lactate_threshold, training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration which you can add to the list seperated by , without any space
+FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,vo2,activity,race_prediction,body_composition") # additional available values are lactate_threshold,training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration which you can add to the list seperated by , without any space
 KEEP_FIT_FILES = True if os.getenv("KEEP_FIT_FILES") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional
 FIT_FILE_STORAGE_LOCATION = os.getenv("FIT_FILE_STORAGE_LOCATION", os.path.join(os.path.expanduser("~"), "fit_filestore"))
 ALWAYS_PROCESS_FIT_FILES = True if os.getenv("ALWAYS_PROCESS_FIT_FILES") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional, will process all FIT files for all activities including indoor ones lacking GPS data
@@ -888,59 +888,32 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
         PARSED_ACTIVITY_ID_LIST.append(activityID)
     return points_list
 
-def get_lactate_threshold_heartrate(date_str):
+def get_lactate_threshold(date_str):
     points_list = []
-    lthr_list_all = garmin_obj.connectapi(f"/biometric-service/stats/lactateThresholdHeartRate/range/{date_str}/{date_str}?aggregation=daily&sport=RUNNING")
+    
+    endpoints = {
+        "HeartRate": f"/biometric-service/stats/lactateThresholdHeartRate/range/{date_str}/{date_str}?aggregation=daily&sport=RUNNING",
+        "Speed": f"/biometric-service/stats/lactateThresholdSpeed/range/{date_str}/{date_str}?aggregation=daily&sport=RUNNING"
+    }
 
-    if lthr_list_all:
-        for lthr_dict in lthr_list_all:
-            data_fields = {
-                "series": lthr_dict.get("series"),
-                "value": lthr_dict.get("value"),
-                "updatedDate": lthr_dict.get("updatedDate"),
-            }
-            if lthr_dict.get("from") and any(value is not None for value in data_fields.values()):
-                # Ensure correct timestamp format
-                timestamp_str = f"{lthr_dict['from']}T00:00:00"
-                timestamp_obj = datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
-                points_list.append({
-                    "measurement": "LactateThresholdHeartRate",
-                    "time": timestamp_obj.isoformat(),  # Ensures proper UTC format
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": data_fields
-                })
-                logging.info(f"Success : Fetching Lactate Threshold - Heart Rate for date {date_str}")
+    for label, endpoint in endpoints.items():
+        lt_list_all = garmin_obj.connectapi(endpoint)
 
-    return points_list
+        if lt_list_all:
+            for lt_dict in lt_list_all:
+                value = lt_dict.get("value")  # Extract only the value
 
-def get_lactate_threshold_speed(date_str):
-    points_list = []
-    ltspeed_list_all = garmin_obj.connectapi(f"/biometric-service/stats/lactateThresholdSpeed/range/{date_str}/{date_str}?aggregation=daily&sport=RUNNING")
-
-    if ltspeed_list_all:
-        for ltspeed_dict in ltspeed_list_all:
-            data_fields = {
-                "series": ltspeed_dict.get("series"),
-                "value": ltspeed_dict.get("value"),
-                "updatedDate": ltspeed_dict.get("updatedDate"),
-            }
-            if ltspeed_dict.get("from") and any(value is not None for value in data_fields.values()):
-                # Ensure correct timestamp format
-                timestamp_str = f"{ltspeed_dict['from']}T00:00:00"
-                timestamp_obj = datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
-                points_list.append({
-                    "measurement": "LactateThresholdHeartRate",
-                    "time": timestamp_obj.isoformat(),  # Ensures proper UTC format
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": data_fields
-                })
-                logging.info(f"Success : Fetching Lactate Threshold - Speed for date {date_str}")
+                if lt_dict.get("from") and value is not None:
+                    points_list.append({
+                        "measurement": "LactateThreshold",
+                        "time": datetime.fromtimestamp(datetime.strptime(lt_dict["from"], "%Y-%m-%d").timestamp(), tz=pytz.timezone("UTC")).isoformat(),
+                        "tags": {
+                            "Device": GARMIN_DEVICENAME,
+                            "Database_Name": INFLUXDB_DATABASE
+                        },
+                        "fields": {f"{label}": value}
+                    })
+                    logging.info(f"Success : Fetching Lactate Threshold {label} for date {date_str}")
 
     return points_list
     
@@ -1191,8 +1164,7 @@ def daily_fetch_write(date_str):
     if 'body_composition' in FETCH_SELECTION:
         write_points_to_influxdb(get_body_composition(date_str))
     if 'lactate_threshold' in FETCH_SELECTION:
-        write_points_to_influxdb(get_lactate_threshold_heartrate(date_str))
-        write_points_to_influxdb(get_lactate_threshold_speed(date_str))
+        write_points_to_influxdb(get_lactate_threshold(date_str))
     if 'training_status' in FETCH_SELECTION:
         write_points_to_influxdb(get_training_status(date_str))
     if 'training_readiness' in FETCH_SELECTION:
