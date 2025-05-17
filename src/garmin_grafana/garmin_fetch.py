@@ -892,30 +892,28 @@ def get_lactate_threshold(date_str):
     points_list = []
     
     endpoints = {
-        "HeartRate": f"/biometric-service/stats/lactateThresholdHeartRate/range/{date_str}/{date_str}?aggregation=daily",
-        "HeartRate_Running": f"/biometric-service/stats/lactateThresholdHeartRate/range/{date_str}/{date_str}?aggregation=daily&sport=RUNNING",
-        "HeartRate_Cycling": f"/biometric-service/stats/lactateThresholdHeartRate/range/{date_str}/{date_str}?aggregation=daily&sport=CYCLING",
-        "Speed_Runnning": f"/biometric-service/stats/lactateThresholdSpeed/range/{date_str}/{date_str}?aggregation=daily&sport=RUNNING",
+        "HeartRateThreshold": f"/biometric-service/stats/lactateThresholdHeartRate/range/{date_str}/{date_str}?aggregation=daily",
+        "SpeedThreshold": f"/biometric-service/stats/lactateThresholdSpeed/range/{date_str}/{date_str}?aggregation=daily",
     }
 
     for label, endpoint in endpoints.items():
         lt_list_all = garmin_obj.connectapi(endpoint)
-
         if lt_list_all:
             for lt_dict in lt_list_all:
-                value = lt_dict.get("value")  # Extract only the value
-
-                if lt_dict.get("from") and value is not None:
+                value = lt_dict.get("value")
+                sport_series = lt_dict.get("series") or "Unknown"
+                if value is not None:
                     points_list.append({
                         "measurement": "LactateThreshold",
-                        "time": datetime.fromtimestamp(datetime.strptime(lt_dict["from"], "%Y-%m-%d").timestamp(), tz=pytz.timezone("UTC")).isoformat(),
+                        "time": datetime.fromtimestamp(datetime.strptime(date_str, "%Y-%m-%d").timestamp(), tz=pytz.timezone("UTC")).isoformat(),
                         "tags": {
                             "Device": GARMIN_DEVICENAME,
-                            "Database_Name": INFLUXDB_DATABASE
+                            "Database_Name": INFLUXDB_DATABASE,
+                            "Sport" : sport_series
                         },
                         "fields": {f"{label}": value}
                     })
-                    logging.info(f"Success : Fetching Lactate Threshold {label} for date {date_str}")
+                    logging.info(f"Success : Fetching Lactate {label} for date {date_str}")
 
     return points_list
     
