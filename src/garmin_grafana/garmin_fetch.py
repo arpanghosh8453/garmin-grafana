@@ -892,8 +892,10 @@ def get_lactate_threshold(date_str):
     points_list = []
     
     endpoints = {
-        "HeartRate": f"/biometric-service/stats/lactateThresholdHeartRate/range/{date_str}/{date_str}?aggregation=daily&sport=RUNNING",
-        "Speed": f"/biometric-service/stats/lactateThresholdSpeed/range/{date_str}/{date_str}?aggregation=daily&sport=RUNNING"
+        "HeartRate": f"/biometric-service/stats/lactateThresholdHeartRate/range/{date_str}/{date_str}?aggregation=daily",
+        "HeartRate_Running": f"/biometric-service/stats/lactateThresholdHeartRate/range/{date_str}/{date_str}?aggregation=daily&sport=RUNNING",
+        "HeartRate_Cycling": f"/biometric-service/stats/lactateThresholdHeartRate/range/{date_str}/{date_str}?aggregation=daily&sport=CYCLING",
+        "Speed_Runnning": f"/biometric-service/stats/lactateThresholdSpeed/range/{date_str}/{date_str}?aggregation=daily&sport=RUNNING",
     }
 
     for label, endpoint in endpoints.items():
