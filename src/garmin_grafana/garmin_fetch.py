@@ -894,9 +894,10 @@ def get_lactate_threshold(date_str):
     
     endpoints = {
         "HeartRateThreshold": f"/biometric-service/stats/lactateThresholdHeartRate/range/{date_str}/{date_str}?aggregation=daily",
-        for sport in LACTATE_THRESHOLD_SPORTS
-            "SpeedThreshold": f"/biometric-service/stats/lactateThresholdSpeed/range/{date_str}/{date_str}?aggregation=daily&sport={sport}",
     }
+
+    for ltsport in LACTATE_THRESHOLD_SPORTS:
+        endpoints[f"SpeedThreshold_{sport}"] = f"/biometric-service/stats/lactateThresholdSpeed/range/{date_str}/{date_str}?aggregation=daily&sport={ltsport}"
 
     for label, endpoint in endpoints.items():
         lt_list_all = garmin_obj.connectapi(endpoint)
