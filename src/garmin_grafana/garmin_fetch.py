@@ -591,8 +591,6 @@ def get_body_composition(date_str):
                     "muscleMass": weight_dict.get("muscleMass"),
                     "physiqueRating": weight_dict.get("physiqueRating"),
                     "visceralFat": weight_dict.get("visceralFat"),
-                    "metabolicAge": weight_dict.get("metabolicAge"),
-                    "weightDelta": weight_dict.get("weightDelta"),
                 }.items() if v is not None
             }
             if data_fields:
