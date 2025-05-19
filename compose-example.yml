@@ -31,7 +31,7 @@ services:
       #####################################################################################
       # - LOG_LEVEL=INFO # change to DEBUG to get DEBUG logs
       # - UPDATE_INTERVAL_SECONDS=300 # Default update check interval is set to 5 minutes
-      # - FETCH_SELECTION=daily_avg,sleep,steps,heartrate,stress,breathing,hrv,vo2,activity,race_prediction,body_composition # This enables selection of fetch data : you can add training_readiness,hill_score,endurance_score,blood_pressure,hydration which are not selected by default separated by , and without space
+      # - FETCH_SELECTION=daily_avg,sleep,steps,heartrate,stress,breathing,hrv,vo2,activity,race_prediction,body_composition # This enables selection of fetch data : Check Discussion #119 to know what additional options are available (add them seperated by , but without a space)
       # - KEEP_FIT_FILES=False # Stores the FIT files (downloads and saves them) when set to True - read docs for more details
       # - ALWAYS_PROCESS_FIT_FILES=False # Enables processing FIT files even if GPS data is not present in it when set to True, default False
       # - USER_TIMEZONE= # Can hardcode user's timezone - must be a valid TZ identifier like Europe/Budapest without quotes, fetches timezone automatically and dynamically on each run if set to empty (default) - Read docs

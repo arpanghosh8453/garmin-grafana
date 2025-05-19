@@ -29,6 +29,7 @@ A docker container to fetch data from Garmin servers and store the data in a loc
 - Project suppliment
   - [Credits](#credits)
   - [Dependencies](#dependencies)
+  - [Contribution Guideline](#contribution-guideline)
   - [Limitations](#limitations)
 - [Support this project](#love-this-project)
 - [Star History](#star-history)
@@ -154,7 +155,7 @@ This project is made for InfluxDB 1.11, as Flux queries on influxDB 2.x can be p
 
 ✅ The Above compose file creates an open read/write access influxdb database with no authentication. Unless you expose this database to the open internet directly, this poses no threat. If you share your local network, you may enable authentication and grant appropriate read/write access to the influxdb_user on the GarminStats database manually if you want with `INFLUXDB_ADMIN_ENABLED`, `INFLUXDB_ADMIN_USER`, and `INFLUXDB_ADMIN_PASSWORD` ENV variables during the setup by following the [influxdb guide](https://github.com/docker-library/docs/blob/master/influxdb/README.md) but this won't be covered here for the sake of simplicity.
 
-✅ You can also enable additional advanced training data fetching (such as Hill Score, Training Readines, Endurance Score Blood Pressure, Hydration etc.) with `FETCH_SELECTION` ENV variable in the compose file. The the `compose-example.yml` file to know what additional options are available. There is no panel showing these additional data on the provided grafana dashboard. You must create your own to visualize these on Grafana.
+✅ You can also enable additional advanced training data fetching (such as Hill Score, Training Readines, Endurance Score Blood Pressure, Hydration etc.) with `FETCH_SELECTION` ENV variable in the compose file. Check [Discussion #119](https://github.com/arpanghosh8453/garmin-grafana/discussions/119#discussion-8338271) to know what additional options are available. There is no panel showing these additional data on the provided grafana dashboard. You must create your own to visualize these on Grafana.
 
 ✅ By default, the pulled FIT files are not stored as files to save storage space during import (an in-memory IO buffer is used instead). If you want to keep the FIT files downloaded during the import for future use in `Strava` or any other application where FIT files are supported for import, you can turn on `KEEP_FIT_FILES=True` under `garmin-fetch-data` environment variables in the compose file. To access the files from the host machine, you should create a folder named `fit_filestore` with `mkdir fit_filestore` inside the `garmin-fetch-data` folder (where your compose file is currently located) and change the ownership with `chown 1000:1000 fit_filestore`, and then must setup a volume bind mount like this `./fit_filestore:/home/appuser/fit_filestore` under the volumes section of `garmin-fetch-data`. This would map the container's internal `/home/appuser/fit_filestore` folder to the `fit_filestore` folder you created. You will see the FIT files for your activities appear inside this `fit_filestore` folder once the script starts running.
 
@@ -290,6 +291,10 @@ This project is made possible by **generous community contribution** towards the
 
 - [python-garminconnect](https://github.com/cyberjunky/python-garminconnect) by [cyberjunky](https://github.com/cyberjunky) : Garmin Web API wrapper
 - [garth](https://github.com/matin/garth) by [matin](https://github.com/matin) : Used for Garmin SSO Authentication
+
+## Contribution Guideline
+
+Please find the contribution guidelines [here](.github/CONTRIBUTING.md)
 
 ## Limitations
 
