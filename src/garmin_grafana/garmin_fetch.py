@@ -582,7 +582,6 @@ def get_body_composition(date_str):
         weight_list = weight_list_all[0].get('allWeightMetrics', [])
         for weight_dict in weight_list:
             data_fields = {
-                k: v for k, v in {
                     "weight": weight_dict.get("weight"),
                     "bmi": weight_dict.get("bmi"),
                     "bodyFat": weight_dict.get("bodyFat"),
@@ -591,9 +590,9 @@ def get_body_composition(date_str):
                     "muscleMass": weight_dict.get("muscleMass"),
                     "physiqueRating": weight_dict.get("physiqueRating"),
                     "visceralFat": weight_dict.get("visceralFat"),
-                }.items() if v is not None
-            }
-            if data_fields:
+                    "metabolicAge": weight_dict.get("metabolicAge")
+                }
+            if not all(value is None for value in data_fields.values()):
                 points_list.append({
                     "measurement":  "BodyComposition",
                     "time": datetime.fromtimestamp((weight_dict['timestampGMT']/1000) , tz=pytz.timezone("UTC")).isoformat() if weight_dict['timestampGMT'] else datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(), # Use GMT 00:00 is timestamp is not available (issue #15)
