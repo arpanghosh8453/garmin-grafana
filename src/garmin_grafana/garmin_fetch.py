@@ -3,8 +3,12 @@ import base64, requests, time, pytz, logging, os, sys, dotenv, io, zipfile
 from fitparse import FitFile, FitParseError
 from datetime import datetime, timedelta
 from influxdb import InfluxDBClient
-from influxdb.exceptions import InfluxDBClientError
-from influxdb_client_3 import InfluxDBClient3, InfluxDBError
+from influxdb.exceptions import InfluxDBClientError as InfluxDBV1Error
+from influxdb_client import InfluxDBClient as InfluxDBClient2
+from influxdb_client.client.exceptions import InfluxDBError as InfluxDBV2Error
+from influxdb_client.client.write_api import SYNCHRONOUS
+from influxdb_client_3 import InfluxDBClient3, InfluxDBError as InfluxDBV3Error
+
 import xml.etree.ElementTree as ET
 from garth.exc import GarthHTTPError
 from garminconnect import (
@@ -33,12 +37,14 @@ if env_override:
 
 # %%
 INFLUXDB_VERSION = os.getenv("INFLUXDB_VERSION",'1') # Your influxdb database version (accepted values are '1' or '3')
-assert INFLUXDB_VERSION in ['1','3'], "Only InfluxDB version 1 or 3 is allowed - please ensure to set this value to either 1 or 3"
+assert INFLUXDB_VERSION in ['1','2','3'], "Only InfluxDB version 1 or 3 is allowed - please ensure to set this value to either 1 or 3"
 INFLUXDB_HOST = os.getenv("INFLUXDB_HOST",'your.influxdb.hostname') # Required
 INFLUXDB_PORT = int(os.getenv("INFLUXDB_PORT", 8086)) # Required
 INFLUXDB_USERNAME = os.getenv("INFLUXDB_USERNAME", 'influxdb_username') # Required
 INFLUXDB_PASSWORD = os.getenv("INFLUXDB_PASSWORD", 'influxdb_access_password') # Required
-INFLUXDB_DATABASE = os.getenv("INFLUXDB_DATABASE", 'GarminStats') # Required
+INFLUXDB_DATABASE = os.getenv("INFLUXDB_DATABASE", 'GarminStats') # Required, in V2 this will be the bucket name
+INFLUXDB_V2_ORG = os.getenv("INFLUXDB_V2_ORG",'') # InfluxDB V2 Organisation name
+INFLUXDB_V2_ACCESS_TOKEN = os.getenv("INFLUXDB_V2_ACCESS_TOKEN",'') # InfluxDB V2 Access token
 INFLUXDB_V3_ACCESS_TOKEN = os.getenv("INFLUXDB_V3_ACCESS_TOKEN",'') # InfluxDB V3 Access token, required only for InfluxDB V3
 TOKEN_DIR = os.getenv("TOKEN_DIR", "~/.garminconnect") # optional
 GARMINCONNECT_EMAIL = os.environ.get("GARMINCONNECT_EMAIL", None) # optional, asks in prompt on run if not provided
@@ -82,20 +88,32 @@ logging.basicConfig(
 try:
     if INFLUXDB_ENDPOINT_IS_HTTP:
         if INFLUXDB_VERSION == '1':
-            influxdbclient = InfluxDBClient(host=INFLUXDB_HOST, port=INFLUXDB_PORT, username=INFLUXDB_USERNAME, password=INFLUXDB_PASSWORD)
-            influxdbclient.switch_database(INFLUXDB_DATABASE)
+            influxdbclient_v1 = InfluxDBClient(host=INFLUXDB_HOST, port=INFLUXDB_PORT, username=INFLUXDB_USERNAME, password=INFLUXDB_PASSWORD)
+            influxdbclient_v1.switch_database(INFLUXDB_DATABASE)
+        elif INFLUXDB_VERSION == '2':
+            influxdbclient_v2 = InfluxDBClient2(
+            url=f"http://{INFLUXDB_HOST}:{INFLUXDB_PORT}",
+            token=INFLUXDB_V2_ACCESS_TOKEN,
+            org=INFLUXDB_V2_ORG,
+            )
         else:
-            influxdbclient = InfluxDBClient3(
+            influxdbclient_v3 = InfluxDBClient3(
             host=f"http://{INFLUXDB_HOST}:{INFLUXDB_PORT}",
             token=INFLUXDB_V3_ACCESS_TOKEN,
             database=INFLUXDB_DATABASE
             )
     else:
         if INFLUXDB_VERSION == '1':
-            influxdbclient = InfluxDBClient(host=INFLUXDB_HOST, port=INFLUXDB_PORT, username=INFLUXDB_USERNAME, password=INFLUXDB_PASSWORD, ssl=True, verify_ssl=True)
-            influxdbclient.switch_database(INFLUXDB_DATABASE)
+            influxdbclient_v1 = InfluxDBClient(host=INFLUXDB_HOST, port=INFLUXDB_PORT, username=INFLUXDB_USERNAME, password=INFLUXDB_PASSWORD, ssl=True, verify_ssl=True)
+            influxdbclient_v1.switch_database(INFLUXDB_DATABASE)
+        elif INFLUXDB_VERSION == '2':
+            influxdbclient_v2 = InfluxDBClient2(
+            url=f"https://{INFLUXDB_HOST}:{INFLUXDB_PORT}",
+            token=INFLUXDB_V2_ACCESS_TOKEN,
+            org=INFLUXDB_V2_ORG,
+            )
         else:
-            influxdbclient = InfluxDBClient3(
+            influxdbclient_v3 = InfluxDBClient3(
             host=f"https://{INFLUXDB_HOST}:{INFLUXDB_PORT}",
             token=INFLUXDB_V3_ACCESS_TOKEN,
             database=INFLUXDB_DATABASE
@@ -108,12 +126,15 @@ try:
      }
     # The following code block tests the connection by writing/overwriting a demo point. raises error and aborts if connection fails. 
     if INFLUXDB_VERSION == '1':
-        influxdbclient.write_points([demo_point])
+        influxdbclient_v1.write_points([demo_point])
+    elif INFLUXDB_VERSION == '2':
+        with influxdbclient_v2.write_api(write_options=SYNCHRONOUS) as api:
+            api.write([demo_point])
     else:
-        influxdbclient.write(record=[demo_point])
-except (InfluxDBClientError, InfluxDBError) as err:
+        influxdbclient_v3.write(record=[demo_point])
+except (InfluxDBV1Error, InfluxDBV2Error, InfluxDBV3Error) as err:
     logging.error("Unable to connect with influxdb database! Aborted")
-    raise InfluxDBClientError("InfluxDB connection failed:" + str(err))
+    raise RuntimeError("InfluxDB connection failed:" + str(err))
 
 # %%
 def iter_days(start_date: str, end_date: str):
@@ -175,12 +196,18 @@ def write_points_to_influxdb(points):
                     item['tags'].update({'User_ID': garmin_obj.garth.profile.get('userName','Unknown')})
             # Write in chunks - Issue reported for large activities data containing >20000 points - Error 413 : payload too large
             for i in range(0, len(points), write_chunk_size):
+                batch = points[i:i + write_chunk_size]
                 if INFLUXDB_VERSION == '1':
-                    influxdbclient.write_points(points[i:i + write_chunk_size])
+                    influxdbclient_v1.write_points(batch)
+                elif INFLUXDB_VERSION == '2':
+                    for point in batch:
+                        del point['tags']['Database_Name'] # This is the bucket name in V2
+                    with influxdbclient_v2.write_api(write_options=SYNCHRONOUS) as api:
+                        api.write(bucket=INFLUXDB_DATABASE, record=batch)
                 else:
-                    influxdbclient.write(record=points[i:i + write_chunk_size])
+                    influxdbclient_v3.write(record=batch)
             logging.info("Success : updated influxDB database with new points")
-    except (InfluxDBClientError, InfluxDBError) as err:
+    except (InfluxDBV1Error, InfluxDBV2Error, InfluxDBV3Error) as err:
         logging.error("Write failed : Unable to connect with database! " + str(err))
 
 # %%
@@ -1248,9 +1275,16 @@ if MANUAL_START_DATE:
 else:
     try:
         if INFLUXDB_VERSION == "1":
-            last_influxdb_sync_time_UTC = pytz.utc.localize(datetime.strptime(list(influxdbclient.query(f"SELECT * FROM HeartRateIntraday ORDER BY time DESC LIMIT 1").get_points())[0]['time'],"%Y-%m-%dT%H:%M:%SZ"))
+            last_influxdb_sync_time_UTC = datetime.strptime(list(
+                influxdbclient_v1.query(f"SELECT * FROM HeartRateIntraday ORDER BY time DESC LIMIT 1").get_points()
+            )[0]['time'],"%Y-%m-%dT%H:%M:%SZ")
+        elif INFLUXDB_VERSION == "2":
+            last_influxdb_sync_time_UTC = influxdbclient_v2.query_api()\
+                .query(query="from(bucket: \"HeartRateIntraday\") |> range(start: -1d) |> last() |> yield(name: \"last\")")\
+                [0]['_time']
         else:
-            last_influxdb_sync_time_UTC = pytz.utc.localize(influxdbclient.query(query="SELECT * FROM HeartRateIntraday ORDER BY time DESC LIMIT 1", language="influxql").to_pylist()[0]['time'])
+            last_influxdb_sync_time_UTC = influxdbclient_v3.query(query="SELECT * FROM HeartRateIntraday ORDER BY time DESC LIMIT 1", language="influxql").to_pylist()[0]['time']
+        last_influxdb_sync_time_UTC = pytz.utc.localize(last_influxdb_sync_time_UTC)
     except Exception as err:
         logging.error(err)
         logging.warning("No previously synced data found in local InfluxDB database, defaulting to 7 day initial fetching. Use specific start date ENV variable to bulk update past data")

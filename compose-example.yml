@@ -14,16 +14,18 @@ services:
       - INFLUXDB_HOST=influxdb
       - INFLUXDB_PORT=8086 # Influxdb V3 maps to 8181 instead of 8086 of V1
       - INFLUXDB_USERNAME=influxdb_user # user should have read/write access to INFLUXDB_DATABASE (Required for influxdb 1.x, ignore for influxdb 3.x - set the 3.x specific variables)
-      - INFLUXDB_PASSWORD=influxdb_secret_password # (Required for influxdb 1.x, ignore for influxdb 3.x - set the 3.x specific variables)
-      - INFLUXDB_DATABASE=GarminStats
+      - INFLUXDB_PASSWORD=influxdb_secret_password # (Required for influxdb 1.x, ignore for influxdb 2.x/3.x - set the 2.x/3.x specific variables)
+      - INFLUXDB_DATABASE=GarminStats # For influx 2.x this is the bucket name
       - GARMINCONNECT_IS_CN=False # Set this to True if you are in mainland China or use Garmin-cn (Default False)
       #####################################################################################
       # - GARMINCONNECT_EMAIL=your_garminconnect_email # optional, read the setup docs. (remove or comment out this line altogether if not used)
       # - GARMINCONNECT_BASE64_PASSWORD=your_base64_encoded_garminconnect_password # optional, must be Base64 encoded, read setup docs. (remove or comment out this line altogether if not used)
       #####################################################################################
-      # The following ENV variables are required only if you are using influxdb V3 (You won't have to set the above )
+      # The following ENV variables are required only if you are using influxdb 2.x/3.x
       #####################################################################################
-      # - INFLUXDB_VERSION=1 # Required for influxdb V3, Default is 1, must be overridden with 3 if using Influxdb V3
+      # - INFLUXDB_VERSION=1 # Required for influxdb 2.x/3.x, Default is 1.x
+      # - INFLUXDB_V2_ORG=your_influxdb_org # Required for influxdb 2.x, Set this to your org name
+      # - INFLUXDB_V2_ACCESS_TOKEN=your_influxdb_token # Required for influxdb V2. Set this to your admin access token (or a token that has database R/W access)
       # - INFLUXDB_V3_ACCESS_TOKEN=your_influxdb_admin_access_token # Required for influxdb V3 (ignored for V1), Set this to your admin access token (or a token that has database R/W access) - You can generate this by following step 3 notes in the README installation
       #####################################################################################
       # The following ENV variables will override some default settings. 
