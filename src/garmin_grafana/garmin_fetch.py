@@ -1144,9 +1144,9 @@ def get_solar_intensity(date_str):
         logging.warning("Skipping Solar Intensity data fetch as GARMIN_DEVICEID is not set.")
         return points_list
 
-    si_all = garmin_obj.get_device_solar_data(device_last_used.get('userDeviceId'), date_str).get('solarDailyDataDTOs')
-    if len(si_all) > 0:
-        si_list = si_all[0].get('solarInputReadings', [])
+    si_all = garmin_obj.get_device_solar_data(GARMIN_DEVICEID, date_str) or {}
+    if len(si_all.get('solarDailyDataDTOs', [])) > 0:
+        si_list = si_all['solarDailyDataDTOs'][0].get('solarInputReadings', [])
         for si_measurement in si_list:
             data_fields = {
                 'solarUtilization': si_measurement.get('solarUtilization', None),
