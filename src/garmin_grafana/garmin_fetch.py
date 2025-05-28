@@ -54,7 +54,7 @@ RATE_LIMIT_CALLS_SECONDS = int(os.getenv("RATE_LIMIT_CALLS_SECONDS", 5)) # optio
 INFLUXDB_ENDPOINT_IS_HTTP = False if os.getenv("INFLUXDB_ENDPOINT_IS_HTTP") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional
 GARMIN_DEVICENAME_AUTOMATIC = False if GARMIN_DEVICENAME != "Unknown" else True # optional
 UPDATE_INTERVAL_SECONDS = int(os.getenv("UPDATE_INTERVAL_SECONDS", 300)) # optional
-FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,vo2,activity,race_prediction,body_composition") # additional available values are lactate_threshold,training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration which you can add to the list seperated by , without any space
+FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,vo2,activity,race_prediction,body_composition") # additional available values are lactate_threshold,training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration,solar_intensity which you can add to the list seperated by , without any space
 LACTATE_THRESHOLD_SPORTS = os.getenv("LACTATE_THRESHOLD_SPORTS", "RUNNING").upper().split(",") # Garmin currently implements RUNNING, but has provisions for CYCLING, and SWIMMING
 KEEP_FIT_FILES = True if os.getenv("KEEP_FIT_FILES") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional
 FIT_FILE_STORAGE_LOCATION = os.getenv("FIT_FILE_STORAGE_LOCATION", os.path.join(os.path.expanduser("~"), "fit_filestore"))
@@ -1133,6 +1133,35 @@ def get_hydration(date_str):
         logging.info(f"Success : Fetching Hydration data for date {date_str}")
     return points_list
 
+
+def get_solar_intensity(date_str):
+    points_list = []
+
+    # Get device last used
+    device_last_used = garmin_obj.get_device_last_used()
+
+    si_all = garmin_obj.get_device_solar_data(device_last_used.get('userDeviceId'), date_str).get('solarDailyDataDTOs')
+    if len(si_all) > 0:
+        si_list = si_all[0].get('solarInputReadings', [])
+        for si_measurement in si_list:
+            data_fields = {
+                'solarUtilization': si_measurement.get('solarUtilization', None),
+                'activityTimeGainMs': si_measurement.get('activityTimeGainMs', None),
+            }
+            if not all(value is None for value in data_fields.values()) and 'readingTimestampGmt' in si_measurement:
+                points_list.append({
+                    "measurement":  "solarIntensity",
+                    "time": pytz.UTC.localize(datetime.strptime(si_measurement['readingTimestampGmt'], '%Y-%m-%dT%H:%M:%S.%f')),
+                    "tags": {
+                        "Device": GARMIN_DEVICENAME,
+                        "Database_Name": INFLUXDB_DATABASE
+                    },
+                    "fields": data_fields
+                })
+        logging.info(f"Success : Fetching Solar Intensity data for date {date_str}")
+    return points_list
+
+
 # %%
 def daily_fetch_write(date_str):
     if REQUEST_INTRADAY_DATA_REFRESH and (datetime.strptime(date_str, "%Y-%m-%d") <= (datetime.today() - timedelta(days=IGNORE_INTRADAY_DATA_REFRESH_DAYS))):
@@ -1194,7 +1223,9 @@ def daily_fetch_write(date_str):
         activity_summary_points_list, activity_with_gps_id_dict = get_activity_summary(date_str)
         write_points_to_influxdb(activity_summary_points_list)
         write_points_to_influxdb(fetch_activity_GPS(activity_with_gps_id_dict))
-            
+    if 'solar_intensity' in FETCH_SELECTION:
+        write_points_to_influxdb(get_solar_intensity(date_str))
+
 
 # %%
 def fetch_write_bulk(start_date_str, end_date_str):
