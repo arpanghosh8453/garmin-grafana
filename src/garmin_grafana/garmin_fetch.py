@@ -1154,7 +1154,7 @@ def get_solar_intensity(date_str):
             }
             if not all(value is None for value in data_fields.values()) and 'readingTimestampGmt' in si_measurement:
                 points_list.append({
-                    "measurement":  "solarIntensity",
+                    "measurement":  "SolarIntensity",
                     "time": pytz.UTC.localize(datetime.strptime(si_measurement['readingTimestampGmt'], '%Y-%m-%dT%H:%M:%S.%f')),
                     "tags": {
                         "Device": GARMIN_DEVICENAME,
