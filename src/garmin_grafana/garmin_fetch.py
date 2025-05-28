@@ -44,7 +44,8 @@ TOKEN_DIR = os.getenv("TOKEN_DIR", "~/.garminconnect") # optional
 GARMINCONNECT_EMAIL = os.environ.get("GARMINCONNECT_EMAIL", None) # optional, asks in prompt on run if not provided
 GARMINCONNECT_PASSWORD = base64.b64decode(os.getenv("GARMINCONNECT_BASE64_PASSWORD")).decode("utf-8") if os.getenv("GARMINCONNECT_BASE64_PASSWORD") != None else None # optional, asks in prompt on run if not provided
 GARMINCONNECT_IS_CN = True if os.getenv("GARMINCONNECT_IS_CN") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional if you are using a Chinese account
-GARMIN_DEVICENAME = os.getenv("GARMIN_DEVICENAME", "Unknown")  # optional, attepmts to set the same automatically if not given
+GARMIN_DEVICENAME = os.getenv("GARMIN_DEVICENAME", "Unknown")  # optional, attempts to set the name automatically if not given
+GARMIN_DEVICEID = os.getenv("GARMIN_DEVICEID", None)  # optional, attempts to set the id automatically if not given
 AUTO_DATE_RANGE = False if os.getenv("AUTO_DATE_RANGE") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional
 MANUAL_START_DATE = os.getenv("MANUAL_START_DATE", None) # optional, in YYYY-MM-DD format, if you want to bulk update only from specific date
 MANUAL_END_DATE = os.getenv("MANUAL_END_DATE", datetime.today().strftime('%Y-%m-%d')) # optional, in YYYY-MM-DD format, if you want to bulk update until a specific date
@@ -259,10 +260,12 @@ def get_daily_stats(date_str):
 # %%
 def get_last_sync():
     global GARMIN_DEVICENAME
+    global GARMIN_DEVICEID
     points_list = []
     sync_data = garmin_obj.get_device_last_used()
     if GARMIN_DEVICENAME_AUTOMATIC:
         GARMIN_DEVICENAME = sync_data.get('lastUsedDeviceName') or "Unknown"
+        GARMIN_DEVICEID = sync_data.get('userDeviceId') or None
     points_list.append({
         "measurement":  "DeviceSync",
         "time": datetime.fromtimestamp(sync_data['lastUsedDeviceUploadTime']/1000, tz=pytz.timezone("UTC")).isoformat(),
@@ -1137,8 +1140,9 @@ def get_hydration(date_str):
 def get_solar_intensity(date_str):
     points_list = []
 
-    # Get device last used
-    device_last_used = garmin_obj.get_device_last_used()
+    if not GARMIN_DEVICEID:
+        logging.warning("Skipping Solar Intensity data fetch as GARMIN_DEVICEID is not set.")
+        return points_list
 
     si_all = garmin_obj.get_device_solar_data(device_last_used.get('userDeviceId'), date_str).get('solarDailyDataDTOs')
     if len(si_all) > 0:
