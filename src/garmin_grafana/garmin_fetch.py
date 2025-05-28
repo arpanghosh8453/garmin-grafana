@@ -1163,7 +1163,7 @@ def get_solar_intensity(date_str):
                     "fields": data_fields
                 })
         logging.info(f"Success : Fetching Solar Intensity data for date {date_str}")
-    else:
+    if len(points_list) == 0:
         logging.warning(f"No Solar Intensity data available for date {date_str}")
     return points_list
 
