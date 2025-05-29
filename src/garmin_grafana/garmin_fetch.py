@@ -55,7 +55,7 @@ RATE_LIMIT_CALLS_SECONDS = int(os.getenv("RATE_LIMIT_CALLS_SECONDS", 5)) # optio
 INFLUXDB_ENDPOINT_IS_HTTP = False if os.getenv("INFLUXDB_ENDPOINT_IS_HTTP") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional
 GARMIN_DEVICENAME_AUTOMATIC = False if GARMIN_DEVICENAME != "Unknown" else True # optional
 UPDATE_INTERVAL_SECONDS = int(os.getenv("UPDATE_INTERVAL_SECONDS", 300)) # optional
-FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,vo2,activity,race_prediction,body_composition") # additional available values are lactate_threshold,training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration,solar_intensity which you can add to the list seperated by , without any space
+FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,fitness_age,vo2,activity,race_prediction,body_composition") # additional available values are lactate_threshold,training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration,solar_intensity which you can add to the list seperated by , without any space
 LACTATE_THRESHOLD_SPORTS = os.getenv("LACTATE_THRESHOLD_SPORTS", "RUNNING").upper().split(",") # Garmin currently implements RUNNING, but has provisions for CYCLING, and SWIMMING
 KEEP_FIT_FILES = True if os.getenv("KEEP_FIT_FILES") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional
 FIT_FILE_STORAGE_LOCATION = os.getenv("FIT_FILE_STORAGE_LOCATION", os.path.join(os.path.expanduser("~"), "fit_filestore"))
@@ -1048,6 +1048,30 @@ def get_race_predictions(date_str):
             logging.info(f"Success : Fetching Race Predictions for date {date_str}")
     return points_list
 
+def get_fitness_age(date_str):
+    points_list = []
+    fitness_age = garmin_obj.get_fitnessage_data(date_str)
+
+    if fitness_age:
+            data_fields = {
+                "chronologicalAge": float(fitness_age.get("chronologicalAge")) if fitness_age.get("chronologicalAge") else None,
+                "fitnessAge": fitness_age.get("fitnessAge"),
+                "achievableFitnessAge": fitness_age.get("achievableFitnessAge"),
+            }
+
+            if not all(value is None for value in data_fields.values()):
+                points_list.append({
+                    "measurement": "FitnessAge",
+                    "time": datetime.strptime(date_str,"%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(), # Use GMT 00:00 for daily record
+                    "tags": {
+                        "Device": GARMIN_DEVICENAME,
+                        "Database_Name": INFLUXDB_DATABASE
+                    },
+                    "fields": data_fields
+                })
+                logging.info(f"Success : Fetching Fitness Age for date {date_str}")
+    return points_list
+
 def get_vo2_max(date_str):
     points_list = []
     max_metrics = garmin_obj.get_max_metrics(date_str)
@@ -1205,6 +1229,8 @@ def daily_fetch_write(date_str):
         write_points_to_influxdb(get_intraday_br(date_str))
     if 'hrv' in FETCH_SELECTION:
         write_points_to_influxdb(get_intraday_hrv(date_str))
+    if 'fitness_age' in FETCH_SELECTION:
+        write_points_to_influxdb(get_fitness_age(date_str))
     if 'vo2' in FETCH_SELECTION:
         write_points_to_influxdb(get_vo2_max(date_str))
     if 'race_prediction' in FETCH_SELECTION:
