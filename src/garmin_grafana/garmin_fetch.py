@@ -285,6 +285,62 @@ def get_last_sync():
     return points_list
 
 # %%
+def get_solar_data(date_str: str):
+    """
+    Fetches solar utilization data from the last synced Garmin device for a specific date.
+
+    Args:
+        date_str (str): The date for which solar data should be retrieved (format: YYYY-MM-DD).
+
+    Returns:
+        list: A list of dictionaries containing solar utilization data with timestamps and metadata.
+    """
+
+    # Retrieve the device ID of the last synced Garmin device
+    sync_data = garmin_obj.get_device_last_used()
+    device_id = sync_data.get("userDeviceId")
+
+    if not device_id:
+        logging.error("Error: Device ID not found.")
+        return []
+
+    points_list = []
+
+    # Fetch solar data for the given device ID on the specified date
+    data = garmin_obj.get_device_solar_data(device_id, date_str)
+
+    # Extract solar readings from the nested JSON structure
+    daily_data = data.get("solarDailyDataDTOs", [])
+
+    for day in daily_data:
+        solar_readings = day.get("solarInputReadings", [])
+
+        for entry in solar_readings:
+            # Convert timestamp to UTC format
+            timestamp = pytz.timezone("UTC").localize(
+                datetime.strptime(entry["readingTimestampGmt"], "%Y-%m-%dT%H:%M:%S.%f")
+            ).isoformat()
+
+            # Append solar utilization data to the list
+            points_list.append({
+                "measurement": "SolarUtilization",
+                "time": timestamp,
+                "tags": {
+                    "Device": GARMIN_DEVICENAME,  # Garmin device name identifier
+                    "Database_Name": INFLUXDB_DATABASE  # Target database for storage
+                },
+                "fields": {
+                    "SolarIntensity": entry.get("solarUtilization")  # Solar intensity measurement
+                }
+            })
+
+    # Log success if data was retrieved
+    if points_list:
+        logging.info(f"Success: Fetched Solar Utilization for date {date_str}")
+
+    return points_list
+    
+# %%
 def get_sleep_data(date_str):
     points_list = []
     all_sleep_data = garmin_obj.get_sleep_data(date_str)
@@ -1217,6 +1273,8 @@ def daily_fetch_write(date_str):
             time.sleep(5)
     if 'daily_avg' in FETCH_SELECTION:
         write_points_to_influxdb(get_daily_stats(date_str))
+    if 'solar' in FETCH_SELECTION:
+        write_points_to_influxdb(get_solar_data(date_str))
     if 'sleep' in FETCH_SELECTION:
         write_points_to_influxdb(get_sleep_data(date_str))
     if 'steps' in FETCH_SELECTION:
