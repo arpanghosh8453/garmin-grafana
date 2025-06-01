@@ -737,6 +737,7 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "DurationSeconds": (parsed_record['timestamp'].replace(tzinfo=pytz.UTC) - activity_start_time).total_seconds(),
                                     "HeartRate": float(parsed_record.get('heart_rate', None)) if parsed_record.get('heart_rate', None) else None,
                                     "Speed": parsed_record.get('enhanced_speed', None) or parsed_record.get('speed', None),
+                                     "GA_Speed": (parsed_record["unknown_140"]) / 1000.0 if parsed_record.get("unknown_140") else None,
                                     "Cadence": parsed_record.get('cadence', None),
                                     "Fractional_Cadence": parsed_record.get('fractional_cadence', None),
                                     "Temperature": parsed_record.get('temperature', None),
