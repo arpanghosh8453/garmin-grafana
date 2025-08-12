@@ -1179,16 +1179,12 @@ def get_menstrual_data(date_str):
         menstrual_response = garmin_obj.get_menstrual_data_for_date(date_str)
         
         if menstrual_response and isinstance(menstrual_response, dict):
-            # Process menstrual_data section
             day_summary = menstrual_response.get('daySummary', {})
             day_log = menstrual_response.get('dayLog', {})
             
-            # Process daySummary - Das startDate ist das Startdatum des Zyklus, nicht des aktuellen Tages
-            # Wir verarbeiten die Daten wenn day_summary existiert, unabhängig vom startDate
             if day_summary:
-                # Extract cycle data from daySummary
                 data_fields = {
-                    "cycleStartDate": day_summary.get('startDate'),  # Das ist das Startdatum des Zyklus
+                    "cycleStartDate": day_summary.get('startDate'), 
                     "dayInCycle": day_summary.get('dayInCycle'),
                     "periodLength": day_summary.get('periodLength'),
                     "currentPhase": day_summary.get('currentPhase'),
@@ -1201,7 +1197,6 @@ def get_menstrual_data(date_str):
                     "educationContentMod": day_summary.get('educationContentMod')
                 }
                 
-                # Only add point if we have meaningful data
                 if any(value is not None and value != "" for value in data_fields.values()):
                     points_list.append({
                         "measurement": "MenstrualCycle",
@@ -1213,127 +1208,149 @@ def get_menstrual_data(date_str):
                         },
                         "fields": data_fields
                     })
-                    logging.info(f"Success : Created MenstrualCycle measurement for date {date_str}")
+                    logging.debug(f"Success : Created MenstrualCycle measurement for date {date_str}")
             
-            # Process dayLog data if present (symptoms, notes, etc.)
             if day_log and isinstance(day_log, dict):
-                # Process symptoms if available
                 symptoms = day_log.get('symptoms', [])
                 if symptoms:
                     for symptom in symptoms:
-                        symptom_fields = {
-                            "symptomType": symptom.get('type'),
-                            "severity": symptom.get('severity'),
-                            "notes": symptom.get('notes')
-                        }
-                        
-                        if any(value is not None and value != "" for value in symptom_fields.values()):
-                            points_list.append({
-                                "measurement": "MenstrualSymptoms",
-                                "time": datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(),
-                                "tags": {
-                                    "Device": GARMIN_DEVICENAME,
-                                    "Database_Name": INFLUXDB_DATABASE,
-                                    "SymptomType": symptom.get('type', 'Unknown')
-                                },
-                                "fields": symptom_fields
-                            })
-                            logging.info(f"Success : Created MenstrualSymptoms measurement for date {date_str}")
-                
-                # Process flow data if available
-                flow_intensity = day_log.get('flowIntensity') or day_log.get('flow')
-                if flow_intensity is not None:
-                    points_list.append({
-                        "measurement": "MenstrualFlow",
-                        "time": datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(),
-                        "tags": {
-                            "Device": GARMIN_DEVICENAME,
-                            "Database_Name": INFLUXDB_DATABASE
-                        },
-                        "fields": {
-                            "flowIntensity": flow_intensity
-                        }
-                    })
-                    logging.info(f"Success : Created MenstrualFlow measurement for date {date_str}")
-                
-                # Process other day log data
-                mood = day_log.get('mood')
-                if mood is not None:
-                    points_list.append({
-                        "measurement": "MenstrualMood",
-                        "time": datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(),
-                        "tags": {
-                            "Device": GARMIN_DEVICENAME,
-                            "Database_Name": INFLUXDB_DATABASE
-                        },
-                        "fields": {
-                            "mood": mood
-                        }
-                    })
-                    logging.info(f"Success : Created MenstrualMood measurement for date {date_str}")
-            
-            # Process menstrual_calendar data for historical context
-            menstrual_calendar = menstrual_response.get('menstrual_calendar', {})
-            
-            if menstrual_calendar:
-                # Check if the current date is in loggedSymptomDays
-                logged_symptom_days = menstrual_calendar.get('loggedSymptomDays', [])
-                logged_ovulation_days = menstrual_calendar.get('loggedOvulationDays', [])
-                logged_note_days = menstrual_calendar.get('loggedNoteDays', [])
-                
-                # Add flags for special days
-                special_day_data = {}
-                if date_str in logged_symptom_days:
-                    special_day_data['hasLoggedSymptoms'] = 1
-                else:
-                    special_day_data['hasLoggedSymptoms'] = 0
-                    
-                if date_str in logged_ovulation_days:
-                    special_day_data['hasLoggedOvulation'] = 1
-                else:
-                    special_day_data['hasLoggedOvulation'] = 0
-                    
-                if date_str in logged_note_days:
-                    special_day_data['hasLoggedNotes'] = 1
-                else:
-                    special_day_data['hasLoggedNotes'] = 0
-
-                points_list.append({
-                    "measurement": "MenstrualFlags",
-                    "time": datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(),
-                    "tags": {
-                        "Device": GARMIN_DEVICENAME,
-                        "Database_Name": INFLUXDB_DATABASE
-                    },
-                    "fields": special_day_data
-                })
-                logging.info(f"Success : Created MenstrualFlags measurement for date {date_str}")
-            
-            cycle_summaries = menstrual_calendar.get('cycleSummaries', [])
-            if cycle_summaries:
-                for cycle in cycle_summaries:
-                    cycle_start = cycle.get('startDate')
-                    if cycle_start:
-                        cycle_fields = {
-                            "periodLength": cycle.get('periodLength'),
-                            "educationContentMod": cycle.get('educationContentMod'),
-                            "lutealPhaseStart": cycle.get('lutealPhaseStart'),
-                            "predictedCycle": 1 if cycle.get('predictedCycle') else 0
-                        }
-                        
                         points_list.append({
-                            "measurement": "MenstrualCycleHistory",
-                            "time": datetime.strptime(cycle_start, "%Y-%m-%d").replace(hour=12, tzinfo=pytz.UTC).isoformat(),
+                            "measurement": "MenstrualSymptoms",
+                            "time": datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(),
                             "tags": {
                                 "Device": GARMIN_DEVICENAME,
                                 "Database_Name": INFLUXDB_DATABASE,
-                                "QueryDate": date_str
+                                "Symptom": symptom 
                             },
-                            "fields": cycle_fields
+                            "fields": {
+                                "value": 1
+                            }
                         })
+                        logging.debug(f"Success : Created MenstrualSymptoms measurement for symptom {symptom} on date {date_str}")
+
+                moods = day_log.get('moods', [])
+                if moods and isinstance(moods, list):
+                    for mood in moods:
+                        points_list.append({
+                            "measurement": "MenstrualMoods",
+                            "time": datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(),
+                            "tags": {
+                                "Device": GARMIN_DEVICENAME,
+                                "Database_Name": INFLUXDB_DATABASE,
+                                "Mood": mood
+                            },
+                            "fields": {
+                                "value": 1
+                            }
+                        })
+                        logging.debug(f"Success : Created MenstrualMoods measurement for mood {mood} on date {date_str}")
                 
-                logging.info(f"Success : Created {len(cycle_summaries)} MenstrualCycleHistory measurements")
+                discharge = day_log.get('discharge')
+                if discharge:
+                    if not isinstance(discharge, list):
+                        discharge = [discharge]
+                    
+                    for discharge_type in discharge:
+                        points_list.append({
+                            "measurement": "MenstrualDischarge",
+                            "time": datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(),
+                            "tags": {
+                                "Device": GARMIN_DEVICENAME,
+                                "Database_Name": INFLUXDB_DATABASE,
+                                "DischargeType": discharge_type
+                            },
+                            "fields": {
+                                "value": 1
+                            }
+                        })
+                        logging.debug(f"Success : Created MenstrualDischarge measurement for discharge {discharge_type} on date {date_str}")
+
                 
+                ovulationDay = day_log.get('ovulationDay')
+                if ovulationDay is not None:
+                    points_list.append({
+                        "measurement": "MenstrualCycle",
+                        "time": datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(),
+                        "tags": {
+                            "Device": GARMIN_DEVICENAME,
+                            "Database_Name": INFLUXDB_DATABASE
+                        },
+                        "fields": {
+                            "ovulationDay": 1 if ovulationDay else 0
+                        }
+                    })
+                    logging.debug(f"Success : Created ovulationDay measurement for date {date_str}")
+
+                sexDrive = day_log.get('sexDrive')
+                if sexDrive is not None:
+                    sexDrive_mapping = {
+                        "LOW": 0,
+                        "AVERAGE": 1,
+                        "HIGH": 2
+                    }
+                    sexDrive_value = sexDrive_mapping.get(sexDrive, sexDrive)
+                    
+                    points_list.append({
+                        "measurement": "MenstrualCycle",
+                        "time": datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(),
+                        "tags": {
+                            "Device": GARMIN_DEVICENAME,
+                            "Database_Name": INFLUXDB_DATABASE
+                        },
+                        "fields": {
+                            "sexDrive": sexDrive_value
+                        }
+                    })
+                    logging.debug(f"Success : Created sexDrive measurement for date {date_str} with value {sexDrive_value}")
+
+
+                flow = day_log.get('flow')
+                if flow is not None:
+                    flow_mapping = {
+                        "LIGHT": 1,
+                        "MEDIUM": 2,
+                        "HEAVY": 3
+                    }
+                    flow_value = flow_mapping.get(flow, flow) if isinstance(flow, str) else flow
+                    
+                    points_list.append({
+                        "measurement": "MenstrualCycle",
+                        "time": datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(),
+                        "tags": {
+                            "Device": GARMIN_DEVICENAME,
+                            "Database_Name": INFLUXDB_DATABASE,
+                        },
+                        "fields": {
+                            "flow": flow_value
+                        }
+                    })
+                    logging.debug(f"Success : Created MenstrualFlow measurement for date {date_str}")
+
+
+                sexualActivity = day_log.get('sexualActivity')
+                if sexualActivity is not None:
+                    activity_mapping = {
+                        "UNPROTECTED": 2,
+                        "PROTECTED": 1,
+                        "NONE": 0
+                    }
+                    activity_value = activity_mapping.get(sexualActivity, None)
+                    
+                    if activity_value is not None:
+                        points_list.append({
+                            "measurement": "MenstrualCycle",
+                            "time": datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(),
+                            "tags": {
+                                "Device": GARMIN_DEVICENAME,
+                                "Database_Name": INFLUXDB_DATABASE,
+                                "ActivityType": sexualActivity
+                            },
+                            "fields": {
+                                "sexualActivity": activity_value
+                            }
+                        })
+                        logging.debug(f"Success : Created sexualActivity measurement for date {date_str}")
+
         if points_list:
             logging.info(f"Success : Fetching menstrual data for date {date_str} - {len(points_list)} measurements created")
             
@@ -1342,7 +1359,7 @@ def get_menstrual_data(date_str):
         import traceback
         logging.error(f"Full traceback: {traceback.format_exc()}")
         
-    logging.info(f"Completed menstrual data processing for date {date_str}")
+    logging.debug(f"Completed menstrual data processing for date {date_str}")
     return points_list
 
 def get_solar_intensity(date_str):
