@@ -1,0 +1,81 @@
+# --- Python bytecode & caches ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.pyi
+*.egg-info/
+.eggs/
+.python-version
+kubernetes-spec-example.yaml
+compose-example.yml
+k8s/
+Extra/
+Grafana_Dashboard/
+Grafana_Datasource/
+
+# --- Virtual envs & package managers ---
+.venv/
+.env/
+env/
+pip-wheel-metadata/
+site-packages/
+.poetry/
+.pdm-python/
+.pdm-build/
+.uv-cache/
+.uv/
+# uv keeps caches under ~/.cache; not copied anyway, but keep tidy:
+.cache/
+
+# --- Test / lint / type-check caches ---
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+
+# --- Build artifacts ---
+build/
+dist/
+wheelhouse/
+*.whl
+
+# --- Logs & dumps ---
+*.log
+*.tmp
+*.swp
+*.swo
+
+# --- Editors / OS ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# --- Git / CI ---
+.git/
+.gitmodules
+.gitignore
+.gitattributes
+.github/
+.gitlab-ci.yml
+.circleci/
+*.code-workspace
+
+
+# --- Notebooks (optional) ---
+.ipynb_checkpoints/
+
+# --- Keep the essentials explicitly (negate ignores if needed) ---
+!Dockerfile
+!docker-compose*.yml
+!pyproject.toml
+!uv.lock
+!src/**
+!README.md
