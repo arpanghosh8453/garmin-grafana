@@ -103,7 +103,7 @@ try:
             )
     demo_point = {
     'measurement': 'DemoPoint',
-    'time': (datetime.now() - timedelta(minutes=1)).isoformat(),
+    'time': (datetime.now(pytz.utc) - timedelta(minutes=1)).isoformat(timespec='seconds'),
     'tags': {'DemoTag': 'DemoTagValue'},
     'fields': {'DemoField': 0}
      }
