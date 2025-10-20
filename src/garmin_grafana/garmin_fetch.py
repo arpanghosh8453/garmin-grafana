@@ -103,7 +103,7 @@ try:
             )
     demo_point = {
     'measurement': 'DemoPoint',
-    'time': '1970-01-01T00:00:00+00:00',
+    'time': (datetime.now() - timedelta(minutes=1)).isoformat(),
     'tags': {'DemoTag': 'DemoTagValue'},
     'fields': {'DemoField': 0}
      }
