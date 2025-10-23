@@ -8,7 +8,7 @@ sleep 5;
 echo "Checking if Docker is installed..."
 if ! command -v docker &> /dev/null
 then
-    echo "Docker is not installed. Attempting to install docker... If this seep fails, you can re-try this script after installing docker manually"
+    echo "Docker is not installed. Attempting to install docker... If this step fails, you can re-try this script after installing docker manually"
     curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh || { echo "Automatic Docker installation failed - Please install docker manually. Exiting."; exit 1; }
     echo "Docker installed, adding current user to docker group (requires superuser access)"
     sudo groupadd docker; sudo usermod -aG docker $USER; newgrp docker
