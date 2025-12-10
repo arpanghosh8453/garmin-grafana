@@ -138,7 +138,18 @@ That should be everything you need for now! The script will be running in the ba
 > [!TIP]
 > You can un-comment the line `# user: root` in the `compose.yml` file to run the container as root (superuser) - this will resolve any permission error or read/write issue you are encountering. Use this if the above `chown` or `chmod` did not work for you and you keep getting the `Permission Error` during running this initial setup. If you do this, you must change the compose volume mount from `./garminconnect-tokens:/home/appuser/.garminconnect` to `./garminconnect-tokens:/root/.garminconnect` so that the token files are preserved when you take down the containers with `docker compose down` for restarting or rebuilding.
 
-5. If you are using self provisioning provided with this project for Grafana setup, then you should run `sed -i 's/\${DS_GARMIN_STATS}/garmin_influxdb/g' Grafana_Dashboard/Garmin-Grafana-Dashboard.json` (assuming you are currently in the root garmin-grafana directory) to update the placeholder variable name `${DS_GARMIN_STATS}` (for supporting external import) in the dashboard JSON to static `garmin_influxdb` as it is the uid set during the self provisioning of the dashboard.
+5. If you are using self provisioning provided with this project for Grafana setup, then you should update the placeholder variable name `${DS_GARMIN_STATS}` (for supporting external import) in the dashboard JSON to static `garmin_influxdb` as it is the uid set during the self provisioning of the dashboard. To do this, run the following command in the root garmin-grafana directory:
+
+**Linux**
+```
+$ sed -i 's/\${DS_GARMIN_STATS}/garmin_influxdb/g' Grafana_Dashboard/Garmin-Grafana-Dashboard.json`
+```
+
+**MacOS**
+```
+$ sed -i '' 's/\${DS_GARMIN_STATS}/garmin_influxdb/g' Grafana_Dashboard/Garmin-Grafana-Dashboard.json`
+```
+
 6. Finally run : `docker compose up -d` ( to launch the full stack in detached mode ). Thereafter you should check the logs with `docker compose logs --follow` to see any potential error from the containers. This will help you debug the issue, if there is any (especially read/write permission issues). if you are using docker volumes, there is little chance of this happening as file permissions will be managed by docker. For bind mounts, if you are having permission issues, please check the troubleshooting section.
 7. Now you can check out the `http://localhost:3000` to reach Grafana (by default), do the initial setup with the default username `admin` and password `admin`. If you have cloned the repository as instructed in step 1, and using self-provisioning for the grafana dashboards + databases, then you should have an automatic dashboard setup under the Dashboards section named as `Garmin-Grafana` filled with data! - and you are done!
 8. if you are not using self-provisioning, then you need to manually add influxdb as the data source and continue follow the rest of these instructions. Please note the influxdb hostname is set as `influxdb` with port `8086` so you should use `http://influxdb:8086` for the address during data source setup and not `http://localhost:8086` because influxdb is a running as a separate container but part of the same docker network and stack. Here the database name should be `GarminStats` matching the influxdb DB name from the docker compose. The query language used for the dashboard is `influxql` which is supported by both InfluxDB 1.x and 3.x, so please select that from the language dropdown during setup. Use the same username and password you used for your influxdb container (check your docker compose config for influxdb container, here we used `influxdb_user` and `influxdb_secret_password` in default configuration) Test the connection to make sure the influxdb is up and reachable (you are good to go if it finds the measurements when you test the connection)
