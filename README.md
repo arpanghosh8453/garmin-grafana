@@ -142,12 +142,12 @@ That should be everything you need for now! The script will be running in the ba
 
 **Linux**
 ```
-$ sed -i 's/\${DS_GARMIN_STATS}/garmin_influxdb/g' Grafana_Dashboard/Garmin-Grafana-Dashboard.json`
+sed -i 's/\${DS_GARMIN_STATS}/garmin_influxdb/g' Grafana_Dashboard/Garmin-Grafana-Dashboard.json
 ```
 
 **MacOS**
 ```
-$ sed -i '' 's/\${DS_GARMIN_STATS}/garmin_influxdb/g' Grafana_Dashboard/Garmin-Grafana-Dashboard.json`
+sed -i '' 's/\${DS_GARMIN_STATS}/garmin_influxdb/g' Grafana_Dashboard/Garmin-Grafana-Dashboard.json
 ```
 
 6. Finally run : `docker compose up -d` ( to launch the full stack in detached mode ). Thereafter you should check the logs with `docker compose logs --follow` to see any potential error from the containers. This will help you debug the issue, if there is any (especially read/write permission issues). if you are using docker volumes, there is little chance of this happening as file permissions will be managed by docker. For bind mounts, if you are having permission issues, please check the troubleshooting section.
