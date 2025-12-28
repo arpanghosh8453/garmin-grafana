@@ -5,12 +5,16 @@ grafana:
     create: false
   ingress:
     enabled: true
+    ingressClassName: "nginx"
     hosts:
       - &grafana_host yourhost.example.com
     annotations:
-      cert-manager.io/cluster-issuer: letsencrypt-staging
+      cert-manager.io/cluster-issuer: "letsencrypt-staging"
+      external-dns.alpha.kubernetes.io/ttl: "120"
+      external-dns.alpha.kubernetes.io/hostname: *grafana_host
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     tls:
-      - secretName: garmin-grafana-tls
+      - secretName: yourhost-tls
         hosts:
           - *grafana_host
   plugins:
@@ -24,7 +28,7 @@ grafana:
           type: influxdb
           url: "http://{{ .Release.Name }}-influxdb:8086"
           database: GarminStats
-          user: admin
+          user: $__env{INFLUXDB_USERNAME}
           secureJsonData:
             password: $__env{INFLUXDB_PASSWORD}
   dashboards:
@@ -50,9 +54,9 @@ influxdb:
     repository: influxdb
     tag: "1.11"
   persistence:
-    enabled: false
-    # size: 5Gi
-    # storageClass: ""
+    enabled: false 
+    #size: 5Gi
+    #storageClass: ""
   auth:
     database: GarminStats
   env:
@@ -69,8 +73,8 @@ garmin:
   tokens:
     persistence:
       enabled: false
-      # size: 100Mi
-      # storageClass: ""
+      #size: 100Mi
+      #storageClass: ""
   env:
     - name: INFLUXDB_HOST
       value: "{{ .Release.Name }}-influxdb"
