@@ -52,6 +52,7 @@ MANUAL_END_DATE = os.getenv("MANUAL_END_DATE", datetime.today().strftime('%Y-%m-
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO") # optional
 FETCH_FAILED_WAIT_SECONDS = int(os.getenv("FETCH_FAILED_WAIT_SECONDS", 1800)) # optional
 RATE_LIMIT_CALLS_SECONDS = int(os.getenv("RATE_LIMIT_CALLS_SECONDS", 5)) # optional
+MAX_CONSECUTIVE_500_ERRORS = int(os.getenv("MAX_CONSECUTIVE_500_ERRORS", 10)) # optional, maximum consecutive HTTP 500 errors before continuing without retrying
 INFLUXDB_ENDPOINT_IS_HTTP = False if os.getenv("INFLUXDB_ENDPOINT_IS_HTTP") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional
 GARMIN_DEVICENAME_AUTOMATIC = False if GARMIN_DEVICENAME != "Unknown" else True # optional
 UPDATE_INTERVAL_SECONDS = int(os.getenv("UPDATE_INTERVAL_SECONDS", 300)) # optional
@@ -1274,6 +1275,7 @@ def daily_fetch_write(date_str):
 # %%
 def fetch_write_bulk(start_date_str, end_date_str):
     global garmin_obj
+    consecutive_500_errors = 0
     logging.info("Fetching data for the given period in reverse chronological order")
     time.sleep(3)
     write_points_to_influxdb(get_last_sync())
@@ -1282,6 +1284,10 @@ def fetch_write_bulk(start_date_str, end_date_str):
         while repeat_loop:
             try:
                 daily_fetch_write(current_date)
+                # Reset consecutive 500 error counter on successful fetch
+                if consecutive_500_errors > 0:
+                    logging.info(f"Successfully fetched data after {consecutive_500_errors} consecutive 500 errors - resetting error counter")
+                    consecutive_500_errors = 0
                 logging.info(f"Success : Fetched all available health metrics for date {current_date} (skipped any if unavailable)")
                 logging.info(f"Waiting : for {RATE_LIMIT_CALLS_SECONDS} seconds")
                 time.sleep(RATE_LIMIT_CALLS_SECONDS)
@@ -1292,12 +1298,44 @@ def fetch_write_bulk(start_date_str, end_date_str):
                 logging.info(f"Waiting : for {FETCH_FAILED_WAIT_SECONDS} seconds")
                 time.sleep(FETCH_FAILED_WAIT_SECONDS)
                 repeat_loop = True
+            except (requests.exceptions.HTTPError, GarthHTTPError) as err:
+                # Check if this is a 500 error
+                is_500_error = False
+                if isinstance(err, requests.exceptions.HTTPError):
+                    if hasattr(err, 'response') and err.response is not None and err.response.status_code == 500:
+                        is_500_error = True
+                elif isinstance(err, GarthHTTPError):
+                    # GarthHTTPError may have status_code attribute or be wrapped around HTTPError
+                    if hasattr(err, 'status_code') and err.status_code == 500:
+                        is_500_error = True
+                    elif hasattr(err, 'response') and err.response is not None and err.response.status_code == 500:
+                        is_500_error = True
+                
+                if is_500_error:
+                    consecutive_500_errors += 1
+                    logging.error(f"HTTP 500 error ({consecutive_500_errors}/{MAX_CONSECUTIVE_500_ERRORS}) for date {current_date}: {err}")
+                    if consecutive_500_errors >= MAX_CONSECUTIVE_500_ERRORS:
+                        logging.warning(f"Received {consecutive_500_errors} consecutive HTTP 500 errors. Logging error and continuing backward in time to fetch remaining data.")
+                        logging.warning(f"Skipping date {current_date} due to persistent 500 errors from Garmin API")
+                        logging.info(f"Waiting : for {RATE_LIMIT_CALLS_SECONDS} seconds before continuing")
+                        time.sleep(RATE_LIMIT_CALLS_SECONDS)
+                        repeat_loop = False
+                    else:
+                        logging.info(f"HTTP 500 error encountered - will retry for date {current_date} (attempt {consecutive_500_errors}/{MAX_CONSECUTIVE_500_ERRORS})")
+                        logging.info(f"Waiting : for {RATE_LIMIT_CALLS_SECONDS} seconds before retry")
+                        time.sleep(RATE_LIMIT_CALLS_SECONDS)
+                        repeat_loop = True
+                else:
+                    # Non-500 HTTP errors - handle as before
+                    logging.error(err)
+                    logging.info(f"HTTP Error (non-500) : Failed to fetch one or more metrics - skipping date {current_date}")
+                    logging.info(f"Waiting : for {RATE_LIMIT_CALLS_SECONDS} seconds")
+                    time.sleep(RATE_LIMIT_CALLS_SECONDS)
+                    repeat_loop = False
             except (
                     GarminConnectConnectionError,
-                    requests.exceptions.HTTPError,
                     requests.exceptions.ConnectionError,
-                    requests.exceptions.Timeout,
-                    GarthHTTPError
+                    requests.exceptions.Timeout
                     ) as err:
                 logging.error(err)
                 logging.info(f"Connection Error : Failed to fetch one or more metrics - skipping date {current_date}")
