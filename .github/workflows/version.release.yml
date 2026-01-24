@@ -6,15 +6,14 @@ on:
       - 'v*'  # matches version release only
 
 env:
-  env:
-    IMAGE_NAME: ${{ vars.IMAGE_NAME || 'garmin-fetch-data' }}
-    IMAGE_TAG: ${{ vars.IMAGE_TAG || github.ref_name }}
-    IMAGE_REPO: ${{ vars.IMAGE_REPO || 'arpanghosh8453' }}
+  IMAGE_NAME: garmin-fetch-data
+  IMAGE_TAG: ${{ github.ref_name }}
+  IMAGE_REPO: arpanghosh8453
 
 jobs:
   build_and_push:
     name: Build Multi-Arch Docker Image and Push to Docker Hub & GHCR
-    if: ${{ github.repository == '${{ env.IMAGE_REPO }}/garmin-grafana' }}
+    if: ${{ github.repository == '${{ vars.IMAGE_REPO || env.IMAGE_REPO }}/garmin-grafana' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -51,6 +50,6 @@ jobs:
           helm dependency build
           helm kubeconform --skip CustomResourceDefinition --summary .
           helm package . -d helm/charts --version ${{ env.IMAGE_TAG }}-helm
-          helm repo index helm/charts --url https://${{ env.IMAGE_REPO }}.github.io/garmin-grafana
+          helm repo index helm/charts --url https://angeloxx.github.io/garmin-grafana
           helm push helm/charts/garmin-grafana-${{ env.IMAGE_TAG }}-helm.tgz \
               oci://registry-1.docker.io/${{ env.IMAGE_REPO }}
