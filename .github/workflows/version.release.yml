@@ -6,9 +6,10 @@ on:
       - 'v*'  # matches version release only
 
 env:
-  IMAGE_NAME: garmin-fetch-data
-  IMAGE_TAG: ${{ github.ref_name }}
-  IMAGE_REPO: arpanghosh8453
+  env:
+    IMAGE_NAME: ${{ vars.IMAGE_NAME || 'garmin-fetch-data' }}
+    IMAGE_TAG: ${{ vars.IMAGE_TAG || github.ref_name }}
+    IMAGE_REPO: ${{ vars.IMAGE_REPO || 'arpanghosh8453' }}
 
 jobs:
   build_and_push:
