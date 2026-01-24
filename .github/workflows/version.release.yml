@@ -8,12 +8,12 @@ on:
 env:
   IMAGE_NAME: garmin-fetch-data
   IMAGE_TAG: ${{ github.ref_name }}
-  IMAGE_REPO: angeloxx
+  IMAGE_REPO: arpanghosh8453
 
 jobs:
   build_and_push:
     name: Build Multi-Arch Docker Image and Push to Docker Hub & GHCR
-    if: ${{ github.repository == 'angeloxx/garmin-grafana' }}
+    if: ${{ github.repository == '${{ env.IMAGE_REPO }}/garmin-grafana' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
