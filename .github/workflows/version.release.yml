@@ -50,6 +50,6 @@ jobs:
           helm dependency build
           helm kubeconform --skip CustomResourceDefinition --summary .
           helm package . -d helm/charts --version ${{ env.IMAGE_TAG }}-helm
-          helm repo index helm/charts --url https://angeloxx.github.io/garmin-grafana
+          helm repo index helm/charts --url https://angeloxx.github.io/${{ env.IMAGE_NAME }}
           helm push helm/charts/${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}-helm.tgz \
               oci://registry-1.docker.io/${{ env.IMAGE_REPO }}
