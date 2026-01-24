@@ -49,7 +49,7 @@ jobs:
           helm plugin install https://github.com/melmorabity/helm-kubeconform --version 0.6.4.1
           helm dependency build
           helm kubeconform --skip CustomResourceDefinition --summary .
-          helm package . -d helm/charts --version $(IMAGE_TAG)-helm
+          helm package . -d helm/charts --version ${{ env.IMAGE_TAG }}-helm
           helm repo index charts/charts --url https://angeloxx.github.io/garmin-grafana
-          helm push helm/charts/$(IMAGE_NAME)-$(IMAGE_TAG)-helm.tgz \
-              oci://registry-1.docker.io/$(IMAGE_REPO)
+          helm push helm/charts/${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}-helm.tgz \
+              oci://registry-1.docker.io/${{ env.IMAGE_REPO }}
