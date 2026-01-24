@@ -45,7 +45,7 @@ jobs:
 
       - name: Build Helm Chart
         run: |
-          cd helm
+          cd k8s
           helm plugin install https://github.com/melmorabity/helm-kubeconform --version 0.6.4.1
           helm dependency build
           helm kubeconform --skip CustomResourceDefinition --summary .
