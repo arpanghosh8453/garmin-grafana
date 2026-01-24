@@ -41,7 +41,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ env.IMAGE_REPO }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ vars.IMAGE_REPO || env.IMAGE_REPO }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
       - name: Build Helm Chart
         run: |
@@ -50,6 +50,6 @@ jobs:
           helm dependency build
           helm kubeconform --skip CustomResourceDefinition --summary .
           helm package . -d helm/charts --version ${{ env.IMAGE_TAG }}-helm
-          helm repo index helm/charts --url https://angeloxx.github.io/garmin-grafana
+          helm repo index helm/charts --url https://${{ vars.IMAGE_REPO || env.IMAGE_REPO }}.github.io/garmin-grafana
           helm push helm/charts/garmin-grafana-${{ env.IMAGE_TAG }}-helm.tgz \
-              oci://registry-1.docker.io/${{ env.IMAGE_REPO }}
+              oci://registry-1.docker.io/${{ vars.IMAGE_REPO || env.IMAGE_REPO }}
