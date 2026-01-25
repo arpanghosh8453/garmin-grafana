@@ -250,7 +250,7 @@ Updating with docker is super simple. Just go to the folder where the `compose.y
 
 #### Manual File Imports
 
-See [here](src/garmin_grafana/README.md) for instructions on how to manually import local files from (e.g, Garmin Bulk Export or local .FIT file).
+See [here](docs/manual-import-instructions.md) for instructions on how to manually import local files from (e.g, Garmin Bulk Export or local .FIT file).
 
 ## Export Data to CSV files
 
