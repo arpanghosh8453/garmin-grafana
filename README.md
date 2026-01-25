@@ -21,7 +21,7 @@ A docker container to fetch data from Garmin servers and store the data in a loc
   - KUBERNETES : [Helm](./k8s/README.md) chart for Kubernetes. Try with minikube - [Makefile](./k8s/Makefile) for easy deployment.
 - **How to**
   - How to [pull historic (old) data](#historical-data-fetching-bulk-update) (bulk update)?
-  - How to [manually import .fit file](#manually-import-activity-fit-files)?
+  - How to [manually import files](#manual-file-imports)?
   - How to [update to newer versions](#update-to-new-versions) of this project?
   - How to [export data as CSV files](#export-data-to-csv-files) for AI insights?
   - How to [backup the InfluxDB Database?](#backup-influxdb-database)
@@ -248,86 +248,9 @@ Updating with docker is super simple. Just go to the folder where the `compose.y
 > [!IMPORTANT]
 > Garmin puts **Intraday historic data** older than **six months** in **cold storage (archived database)** and they are not available to the regular API endpoints directly anymore. You can do a manual refresh request for that day from the app, and only then the data becomes available for 7 days before it goes back to cold storage again. There is a daily server-side limit on the refresh requests (estimated around 20-40 per day) - So it's not possible to refresh the data in bulk while importing. if you have used this script to bulk fetch your past data older than 6 months, the intraday data points (indtaday HR rates, intraday sleep stages, etc.) will be missing for the older dates - although the daily average data points remain available the API endpoints for any past dates (regardless of how old they are) and hence remains unaffected. Please check out [Issue #77](https://github.com/arpanghosh8453/garmin-grafana/issues/77) if you want to know more about this. This is not a limitation of this project as it is imposed by Garmin's API design.
 
-#### Garmin Bulk Importer (From Garmin Connect Export)
+#### Manual File Imports
 
-If you downloaded a bulk export .zip from the Garmin Connect website. You can import that data as well without having to be rate limited by API calls.
-
-##### Using Docker
-
-Use this method if your Garmin Grafana stack is running locally on the same machine.
-
-1. Download your Garmin data (See [Export All Garmin Data Using Account Management Center](https://support.garmin.com/en-US/?faq=W1TvTPW8JZ6LfJSfK512Q8), this process can take several weeks)
-2. Stop the currently running garmin-fetch container.
-3. Run the `garmin_bulk_importer.py` script using the docker container and specify the path to the unzipped Garmin data and a start and end time.
-
-```
-# In ~/garmin-grafana
-docker compose run --rm -v <path_to_export>:/bulk_export -e MANUAL_START_DATE=YYYY-MM-DD -e MANUAL_END_DATE=YYYY-MM-DD garmin-fetch-data uv run garmin_grafana/garmin_bulk_importer.py
-```
-
-Example:
-
-```
-docker compose run --rm -v "~/Downloads/Garmin Export 2025-11-27":/bulk_export -e MANUAL_START_DATE=2018-01-01 -e MANUAL_END_DATE=2025-01-03 garmin-fetch-data uv run garmin_grafana/garmin_bulk_importer.py
-```
-
-##### Using Python
-
-This method is useful if your Garmin Grafana stack is running on a remote machine.
-
-1. Download your Garmin data (See [Export All Garmin Data Using Account Management Center](https://support.garmin.com/en-US/?faq=W1TvTPW8JZ6LfJSfK512Q8), this process can take several weeks)
-2. Update the influxdb docker container to map port 8086 externally
-
-```
-  influxdb:
-    ports:
-      - '<external_port>:8086'  # This can be any unused port
-```
-
-3. Checkout this repo locally on any machine
-4. cd into the repo and install the Python dependences
-
-```
-uv sync --locked
-```
-
-5. cd into `src/garmin_grafana` and create a `override-default-vars.env` file
-
-```
-INFLUXDB_HOST = "<influxdb_host_machine_ip_address>"
-INFLUXDB_PORT = "<influxdb_external_port>" # This should be the port you mapped to above
-```
-
-6. Run the `garmin_bulk_importer.py` script and specify the path to the unzipped Garmin data and a start and end time
-
-```
-# In ~/garmin-grafana/src/garmin_grafana
-uv run garmin_bulk_importer.py --bulk_data_path="~/Downloads/Garmin Export 2025-11-27" --start_date=2018-01-01 --end_date=2025-01-03
-```
-
-## Manually Import Activity .FIT files
-
-If you want to manually import .FIT files saved locally on your machine you can run the `fit_activity_importer.py` script. Follow the same instructions in the section above to setup your environment to run the script using either Docker or Python script directly. Replace the last step with either of the following:
-
-Docker:
-
-```
-# In ~/garmin-grafana
-docker compose exec --rm -v <path_to_fit_file>:/fit_file.fit garmin-fetch-data uv run garmin_grafana/fit_activity_importer.py
-```
-
-Example:
-
-```
-docker compose exec --rm -v "~/Downloads/F129000.FIT":/fit_file.fit garmin-fetch-data uv run garmin_grafana/fit_activity_importer.py
-```
-
-Python:
-
-```
-# In ~/garmin-grafana/src/garmin_grafana
-uv run fit_activity_importer.py --fit_file=<path_to_fit_file>
-```
+See [here](src/garmin_grafana/README.md) for instructions on how to manually import local files from (e.g, Garmin Bulk Export or local .FIT file).
 
 ## Export Data to CSV files
 
