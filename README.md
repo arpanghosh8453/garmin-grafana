@@ -265,6 +265,12 @@ Use this method if your Garmin Grafana stack is running locally on the same mach
 docker compose exec --rm -v <path_to_export>:/bulk_export -e MANUAL_START_DATE=YYYY-MM-DD -e MANUAL_END_DATE=YYYY-MM-DD garmin-fetch-data uv run garmin_grafana/garmin_bulk_importer.py
 ```
 
+Example:
+
+```
+docker compose exec --rm -v "~/Downloads/Garmin Export 2025-11-27":/bulk_export -e MANUAL_START_DATE=2018-01-01 -e MANUAL_END_DATE=2025-01-03 garmin-fetch-data uv run garmin_grafana/garmin_bulk_importer.py
+```
+
 ##### Using Python
 
 This method is useful if your Garmin Grafana stack is running on a remote machine.
@@ -310,11 +316,17 @@ Docker:
 docker compose exec --rm -v <path_to_fit_file>:/fit_file.fit garmin-fetch-data uv run garmin_grafana/fit_activity_importer.py
 ```
 
+Example:
+
+```
+docker compose exec --rm -v "~/Downloads/F129000.FIT":/fit_file.fit garmin-fetch-data uv run garmin_grafana/fit_activity_importer.py
+```
+
 Python:
 
 ```
 # In ~/garmin-grafana/src/garmin_grafana
-uv run fit_activity_importer.py --fit_file="F310000.FIT"
+uv run fit_activity_importer.py --fit_file=<path_to_fit_file>
 ```
 
 ## Export Data to CSV files
