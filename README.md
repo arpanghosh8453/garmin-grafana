@@ -249,7 +249,23 @@ Updating with docker is super simple. Just go to the folder where the `compose.y
 
 #### Garmin Bulk Importer (From Garmin Connect Export)
 
-If you downloaded a bulk export .zip from the Garmin Connect website. You can import that data as well without having to be rate limited by API calls. This method requires Python to be installed.
+If you downloaded a bulk export .zip from the Garmin Connect website. You can import that data as well without having to be rate limited by API calls.
+
+##### Using Docker
+
+Use this method if your Garmin Grafana stack is running locally on the same machine.
+
+1. Download your Garmin data (See [Export All Garmin Data Using Account Management Center](https://support.garmin.com/en-US/?faq=W1TvTPW8JZ6LfJSfK512Q8), this process can take several weeks)
+
+2. Run the `garmin_bulk_importer.py` script using the docker container and specify the path to the unzipped Garmin data and a start and end time.
+
+```
+cd ~/garmin-grafana && docker compose exec --rm -v <path_to_export>:/bulk_export -e MANUAL_START_DATE=YYYY-MM-DD -e MANUAL_END_DATE=YYYY-MM-DD garmin-fetch-data uv run garmin_grafana/garmin_bulk_importer.py
+```
+
+##### Using Python
+
+This method is useful if your Garmin Grafana stack is running on a remote machine.
 
 1. Download your Garmin data (See [Export All Garmin Data Using Account Management Center](https://support.garmin.com/en-US/?faq=W1TvTPW8JZ6LfJSfK512Q8), this process can take several weeks)
 2. Update the influxdb docker container to map port 8086 externally

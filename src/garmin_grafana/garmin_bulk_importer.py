@@ -474,16 +474,20 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--bulk_data_path",
-        required=True,
+        default="/bulk_export",
         help="Path to a directory containing your Garmin data from the bulk export",
     )
     parser.add_argument(
-        "--start_date", required=True, help="Optional tart date (YYYY-MM-DD)."
+        "--start_date", help="Optional tart date (YYYY-MM-DD)."
     )
     parser.add_argument(
-        "--end_date", required=True, help="Required end date (YYYY-MM-DD)"
+        "--end_date", help="Required end date (YYYY-MM-DD)"
     )
     args = parser.parse_args()
+
+    args.start_date = args.start_date or os.getenv("MANUAL_START_DATE")
+    if not args.start_date:
+        raise RuntimeError("start_date must be set using --start_date or MANUAL_START_DATE environment varioable")
 
     # Override the garmin_obj with GarminBulkExport that implements the same interface.
     garmin_fetch.garmin_obj = GarminBulkExport(args.bulk_data_path)
