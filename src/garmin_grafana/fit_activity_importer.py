@@ -148,7 +148,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--fit_file",
-        required=True,
+        # This is the default path used with doing a manual docker import (See README instructions)
+        default="/fit_file.fit",
         help="Path to the .fit file",
     )
     parser.add_argument(

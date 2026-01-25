@@ -21,6 +21,7 @@ A docker container to fetch data from Garmin servers and store the data in a loc
   - KUBERNETES : [Helm](./k8s/README.md) chart for Kubernetes. Try with minikube - [Makefile](./k8s/Makefile) for easy deployment.
 - **How to**
   - How to [pull historic (old) data](#historical-data-fetching-bulk-update) (bulk update)?
+  - How to [manually import .fit file](#manually-import-activity-fit-files)?
   - How to [update to newer versions](#update-to-new-versions) of this project?
   - How to [export data as CSV files](#export-data-to-csv-files) for AI insights?
   - How to [backup the InfluxDB Database?](#backup-influxdb-database)
@@ -260,7 +261,8 @@ Use this method if your Garmin Grafana stack is running locally on the same mach
 2. Run the `garmin_bulk_importer.py` script using the docker container and specify the path to the unzipped Garmin data and a start and end time.
 
 ```
-cd ~/garmin-grafana && docker compose exec --rm -v <path_to_export>:/bulk_export -e MANUAL_START_DATE=YYYY-MM-DD -e MANUAL_END_DATE=YYYY-MM-DD garmin-fetch-data uv run garmin_grafana/garmin_bulk_importer.py
+# In ~/garmin-grafana
+docker compose exec --rm -v <path_to_export>:/bulk_export -e MANUAL_START_DATE=YYYY-MM-DD -e MANUAL_END_DATE=YYYY-MM-DD garmin-fetch-data uv run garmin_grafana/garmin_bulk_importer.py
 ```
 
 ##### Using Python
@@ -293,7 +295,26 @@ INFLUXDB_PORT = "<influxdb_external_port>" # This should be the port you mapped 
 6. Run the `garmin_bulk_importer.py` script and specify the path to the unzipped Garmin data and a start and end time
 
 ```
+# In ~/garmin-grafana/src/garmin_grafana
 uv run garmin_bulk_importer.py --bulk_data_path="~/Downloads/Garmin Export 2025-11-27" --start_date=2018-01-01 --end_date=2025-01-03
+```
+
+## Manually Import Activity .FIT files
+
+If you want to manually import .FIT files saved locally on your machine you can run the `fit_activity_importer.py` script. Follow the same instructions in the section above to setup your environment to run the script using either Docker or Python script directly. Replace the last step with either of the following:
+
+Docker:
+
+```
+# In ~/garmin-grafana
+docker compose exec --rm -v <path_to_fit_file>:/fit_file.fit garmin-fetch-data uv run garmin_grafana/fit_activity_importer.py
+```
+
+Python:
+
+```
+# In ~/garmin-grafana/src/garmin_grafana
+uv run fit_activity_importer.py --fit_file="F310000.FIT"
 ```
 
 ## Export Data to CSV files
