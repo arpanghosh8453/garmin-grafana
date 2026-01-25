@@ -60,7 +60,7 @@ def cache_fit_file_index(fit_file_index, output_path: Path):
     Save fit_file_index to a JSON file for debugging.
     """
     output_path = Path(output_path)
-    logging.info(f"Caching fit index to {CACHED_FIT_FILE_INDEX_FILENAME}")
+    logging.info(f"Caching fit index to {output_path}")
 
     serializable = []
     for entry in fit_file_index:
@@ -85,7 +85,7 @@ def load_cached_fit_file_index(input_path: Path):
     if not input_path.exists():
         return None
 
-    logging.info(f"Using cached fit index at {CACHED_FIT_FILE_INDEX_FILENAME}")
+    logging.info(f"Using cached fit index at {input_path}")
     with open(input_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
@@ -144,8 +144,9 @@ class GarminBulkExport:
         self.sleep_stats = self.load_sleep_stats()
         self.agg_stats, self.hydration_stats = self.load_agg_stats()
 
+        self.cached_fit_file_index = self.path / CACHED_FIT_FILE_INDEX_FILENAME
         self.fit_file_index = (
-            load_cached_fit_file_index(CACHED_FIT_FILE_INDEX_FILENAME)
+            load_cached_fit_file_index(self.cached_fit_file_index)
             or self.load_fit_file_index()
         )
 
@@ -341,7 +342,7 @@ class GarminBulkExport:
                             )
 
         logging.info("Found %d activity .fit files", len(fit_file_index))
-        cache_fit_file_index(fit_file_index, CACHED_FIT_FILE_INDEX_FILENAME)
+        cache_fit_file_index(fit_file_index, self.cached_fit_file_index)
         return fit_file_index
 
     def get_device_last_used(self):
@@ -479,7 +480,11 @@ if __name__ == "__main__":
         help="Path to a directory containing your Garmin data from the bulk export",
     )
     parser.add_argument("--start_date", help="Optional tart date (YYYY-MM-DD).")
-    parser.add_argument("--end_date", help="Required end date (YYYY-MM-DD)")
+    parser.add_argument(
+        "--end_date",
+        help="Required end date (YYYY-MM-DD)",
+        default=datetime.today().strftime("%Y-%m-%d"),
+    )
     args = parser.parse_args()
 
     args.start_date = args.start_date or os.getenv("MANUAL_START_DATE")

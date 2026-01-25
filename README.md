@@ -257,18 +257,18 @@ If you downloaded a bulk export .zip from the Garmin Connect website. You can im
 Use this method if your Garmin Grafana stack is running locally on the same machine.
 
 1. Download your Garmin data (See [Export All Garmin Data Using Account Management Center](https://support.garmin.com/en-US/?faq=W1TvTPW8JZ6LfJSfK512Q8), this process can take several weeks)
-
-2. Run the `garmin_bulk_importer.py` script using the docker container and specify the path to the unzipped Garmin data and a start and end time.
+2. Stop the currently running garmin-fetch container.
+3. Run the `garmin_bulk_importer.py` script using the docker container and specify the path to the unzipped Garmin data and a start and end time.
 
 ```
 # In ~/garmin-grafana
-docker compose exec --rm -v <path_to_export>:/bulk_export -e MANUAL_START_DATE=YYYY-MM-DD -e MANUAL_END_DATE=YYYY-MM-DD garmin-fetch-data uv run garmin_grafana/garmin_bulk_importer.py
+docker compose run --rm -v <path_to_export>:/bulk_export -e MANUAL_START_DATE=YYYY-MM-DD -e MANUAL_END_DATE=YYYY-MM-DD garmin-fetch-data uv run garmin_grafana/garmin_bulk_importer.py
 ```
 
 Example:
 
 ```
-docker compose exec --rm -v "~/Downloads/Garmin Export 2025-11-27":/bulk_export -e MANUAL_START_DATE=2018-01-01 -e MANUAL_END_DATE=2025-01-03 garmin-fetch-data uv run garmin_grafana/garmin_bulk_importer.py
+docker compose run --rm -v "~/Downloads/Garmin Export 2025-11-27":/bulk_export -e MANUAL_START_DATE=2018-01-01 -e MANUAL_END_DATE=2025-01-03 garmin-fetch-data uv run garmin_grafana/garmin_bulk_importer.py
 ```
 
 ##### Using Python
