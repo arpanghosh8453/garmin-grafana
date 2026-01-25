@@ -99,12 +99,12 @@ Use the following command to clone this repository to your local machine
 ```bash
 cd ~ && git clone https://github.com/arpanghosh8453/garmin-grafana.git garmin-grafana
 ```
-Use the command next to install it automatically using the easy-install script. If it fails because docker was not installed, retry the command again after installing docker. 
+
+Use the command next to install it automatically using the easy-install script. If it fails because docker was not installed, retry the command again after installing docker.
 
 ```bash
 cd garmin-grafana && sudo bash ./easy-install.sh
 ```
-
 
 Enter the Garmin Connect credentials when prompted and you should be all up and running (you will be prompted for 2FA code as well if you have that set up). Once the data keeps coming, you can check out the `http://localhost:3000` to reach Grafana (by default), do the initial setup with the default username `admin` and password `admin`. Check out the dashboards link on the left sidebar. you should have a dashboard auto-configured as `Garmin-Stats` under the dashboards section. There you should see the data added. It will **keep updating automatically** as soon as new data syncs with your Garmin Connect account.
 
@@ -175,7 +175,7 @@ This project is made for InfluxDB 1.11, as Flux queries on influxDB 2.x can be p
 
 ✅ The Above compose file creates an open read/write access influxdb database with no authentication. Unless you expose this database to the open internet directly, this poses no threat. If you share your local network, you may enable authentication and grant appropriate read/write access to the influxdb_user on the GarminStats database manually if you want with `INFLUXDB_ADMIN_ENABLED`, `INFLUXDB_ADMIN_USER`, and `INFLUXDB_ADMIN_PASSWORD` ENV variables during the setup by following the [influxdb guide](https://github.com/docker-library/docs/blob/master/influxdb/README.md) but this won't be covered here for the sake of simplicity.
 
-✅ You can also enable additional advanced training data fetching (such as Hill Score, Training Readiness, Endurance Score Blood Pressure, Hydration etc.) with `FETCH_SELECTION` ENV variable in the compose file. Check [Discussion #119](https://github.com/arpanghosh8453/garmin-grafana/discussions/119#discussion-8338271) to know what additional options are available. There is no panel showing these additional data on the default grafana dashboard. You must create your own to visualize these on Grafana or [use this one](https://github.com/brunothesatellite/grafana-dashboard) from @brunothesatellite which contains more panels. 
+✅ You can also enable additional advanced training data fetching (such as Hill Score, Training Readiness, Endurance Score Blood Pressure, Hydration etc.) with `FETCH_SELECTION` ENV variable in the compose file. Check [Discussion #119](https://github.com/arpanghosh8453/garmin-grafana/discussions/119#discussion-8338271) to know what additional options are available. There is no panel showing these additional data on the default grafana dashboard. You must create your own to visualize these on Grafana or [use this one](https://github.com/brunothesatellite/grafana-dashboard) from @brunothesatellite which contains more panels.
 
 ✅ By default, the pulled FIT files are not stored as files to save storage space during import (an in-memory IO buffer is used instead). If you want to keep the FIT files downloaded during the import for future use in `Strava` or any other application where FIT files are supported for import, you can turn on `KEEP_FIT_FILES=True` under `garmin-fetch-data` environment variables in the compose file. To access the files from the host machine, you should create a folder named `fit_filestore` with `mkdir fit_filestore` inside the `garmin-fetch-data` folder (where your compose file is currently located) and change the ownership with `chown 1000:1000 fit_filestore`, and then must setup a volume bind mount like this `./fit_filestore:/home/appuser/fit_filestore` under the volumes section of `garmin-fetch-data`. This would map the container's internal `/home/appuser/fit_filestore` folder to the `fit_filestore` folder you created. You will see the FIT files for your activities appear inside this `fit_filestore` folder once the script starts running.
 
@@ -183,7 +183,7 @@ This project is made for InfluxDB 1.11, as Flux queries on influxDB 2.x can be p
 
 ✅ If you are having missing data on previous days till midnight (which are available on Garmin Connect but missing on dashboard) or sync issues when using the automatic periodic fetching, consider updating the container to recent version and use `USER_TIMEZONE` environment variable under the `garmin-fetch-data` service. The value must be a valid tz identifier like `Europe/Budapest`. This variable is optional and the script tries to determine the timezone and fetch the UTC offset automatically if this variable is set as empty. If you see the automatic identification is not working for you, this variable can be used to override that behaviour and ensures the script is using the hardcoded timezone for all data fetching related activities. The previous gaps won't be filled (you need to fetch them using historic bulk update method), but moving forward, the script will keep everything in sync.
 
-✅ Want this dashboard in **Imperial units** instead of **metric units**? I can't maintain two separate dashboards at the same time but here is an [excellent step-by-step guide](https://github.com/arpanghosh8453/garmin-grafana/issues/27#issuecomment-2817081738) on how you can do it yourself on your dashboard! Also, If you prefer 24 hours time format instead of 12 hour with AM/PM, you can remove `GF_DATE_FORMATS_*` ENV variables from the `compose.yml` file. 
+✅ Want this dashboard in **Imperial units** instead of **metric units**? I can't maintain two separate dashboards at the same time but here is an [excellent step-by-step guide](https://github.com/arpanghosh8453/garmin-grafana/issues/27#issuecomment-2817081738) on how you can do it yourself on your dashboard! Also, If you prefer 24 hours time format instead of 12 hour with AM/PM, you can remove `GF_DATE_FORMATS_*` ENV variables from the `compose.yml` file.
 
 ### Collecting periodic watch battery levels
 
@@ -205,7 +205,7 @@ influxdb:
   max_retries: 3
   include:
     entities:
-       - sensor.garmin_device_battery_level
+      - sensor.garmin_device_battery_level
   tags:
     source: hass
 ```
@@ -214,7 +214,7 @@ There is a Grafana panel in the dashboard (given with this project) which displa
 
 ## Multi user instance setup
 
-If this is working well for you, maybe you want to set this up for your family/spouse. For that, you should not duplicate the full compose stack (you can, but then you will have two instances or Grafana and Influxdb containers running on the same host machine, which is not a smart idea). You should be able to do this by following [this guide](https://github.com/arpanghosh8453/garmin-grafana/issues/96#issuecomment-2868627808). There is no automatic setup script for this - you need to have a little understanding of docker and follow the given instructions. 
+If this is working well for you, maybe you want to set this up for your family/spouse. For that, you should not duplicate the full compose stack (you can, but then you will have two instances or Grafana and Influxdb containers running on the same host machine, which is not a smart idea). You should be able to do this by following [this guide](https://github.com/arpanghosh8453/garmin-grafana/issues/96#issuecomment-2868627808). There is no automatic setup script for this - you need to have a little understanding of docker and follow the given instructions.
 
 ## Update to new versions
 
@@ -246,6 +246,39 @@ Updating with docker is super simple. Just go to the folder where the `compose.y
 
 > [!IMPORTANT]
 > Garmin puts **Intraday historic data** older than **six months** in **cold storage (archived database)** and they are not available to the regular API endpoints directly anymore. You can do a manual refresh request for that day from the app, and only then the data becomes available for 7 days before it goes back to cold storage again. There is a daily server-side limit on the refresh requests (estimated around 20-40 per day) - So it's not possible to refresh the data in bulk while importing. if you have used this script to bulk fetch your past data older than 6 months, the intraday data points (indtaday HR rates, intraday sleep stages, etc.) will be missing for the older dates - although the daily average data points remain available the API endpoints for any past dates (regardless of how old they are) and hence remains unaffected. Please check out [Issue #77](https://github.com/arpanghosh8453/garmin-grafana/issues/77) if you want to know more about this. This is not a limitation of this project as it is imposed by Garmin's API design.
+
+#### Garmin Bulk Importer (From Garmin Connect Export)
+
+If you downloaded a bulk export .zip from the Garmin Connect website. You can import that data as well without having to be rate limited by API calls. This method requires Python to be installed.
+
+1. Download your Garmin data (See [Export All Garmin Data Using Account Management Center](https://support.garmin.com/en-US/?faq=W1TvTPW8JZ6LfJSfK512Q8), this process can take several weeks)
+2. Update the influxdb docker container to map port 8086 externally
+
+```
+  influxdb:
+    ports:
+      - '<external_port>:8086'  # This can be any unused port
+```
+
+3. Checkout this repo locally on any machine
+4. cd into the repo and install the Python dependences
+
+```
+uv sync --locked
+```
+
+5. cd into `src/garmin_grafana` and create a `override-default-vars.env` file
+
+```
+INFLUXDB_HOST = "<influxdb_host_machine_ip_address>"
+INFLUXDB_PORT = "<influxdb_external_port>" # This should be the port you mapped to above
+```
+
+6. Run the `garmin_bulk_importer.py` script and specify the path to the unzipped Garmin data and a start and end time
+
+```
+uv run garmin_bulk_importer.py --bulk_data_path="~/Downloads/Garmin Export 2025-11-27" --start_date=2018-01-01 --end_date=2025-01-03
+```
 
 ## Export Data to CSV files
 
