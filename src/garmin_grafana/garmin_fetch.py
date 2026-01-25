@@ -1289,8 +1289,9 @@ def fetch_write_bulk(start_date_str, end_date_str):
                     logging.info(f"Successfully fetched data after {consecutive_500_errors} consecutive 500 errors - resetting error counter")
                     consecutive_500_errors = 0
                 logging.info(f"Success : Fetched all available health metrics for date {current_date} (skipped any if unavailable)")
-                logging.info(f"Waiting : for {RATE_LIMIT_CALLS_SECONDS} seconds")
-                time.sleep(RATE_LIMIT_CALLS_SECONDS)
+                if RATE_LIMIT_CALLS_SECONDS > 0:
+                    logging.info(f"Waiting : for {RATE_LIMIT_CALLS_SECONDS} seconds")
+                    time.sleep(RATE_LIMIT_CALLS_SECONDS)
                 repeat_loop = False
             except GarminConnectTooManyRequestsError as err:
                 logging.error(err)
@@ -1350,46 +1351,45 @@ def fetch_write_bulk(start_date_str, end_date_str):
                 repeat_loop = True
 
 
-# %%
-garmin_obj = garmin_login()
+if __name__ == "__main__":
+    garmin_obj = garmin_login()
 
-# %%
-if MANUAL_START_DATE:
-    fetch_write_bulk(MANUAL_START_DATE, MANUAL_END_DATE)
-    logging.info(f"Bulk update success : Fetched all available health metrics for date range {MANUAL_START_DATE} to {MANUAL_END_DATE}")
-    exit(0)
-else:
-    try:
-        if INFLUXDB_VERSION == "1":
-            last_influxdb_sync_time_UTC = pytz.utc.localize(datetime.strptime(list(influxdbclient.query(f"SELECT * FROM HeartRateIntraday ORDER BY time DESC LIMIT 1").get_points())[0]['time'],"%Y-%m-%dT%H:%M:%SZ"))
-        else:
-            last_influxdb_sync_time_UTC = pytz.utc.localize(influxdbclient.query(query="SELECT * FROM HeartRateIntraday ORDER BY time DESC LIMIT 1", language="influxql").to_pylist()[0]['time'])
-    except Exception as err:
-        logging.error(err)
-        logging.warning("No previously synced data found in local InfluxDB database, defaulting to 7 day initial fetching. Use specific start date ENV variable to bulk update past data")
-        last_influxdb_sync_time_UTC = (datetime.today() - timedelta(days=7)).astimezone(pytz.timezone("UTC"))
-    try:
-        if USER_TIMEZONE: # If provided by user, using that. 
-            local_timediff = datetime.now(tz=pytz.timezone(USER_TIMEZONE)).utcoffset()
-        else: # otherwise try to set automatically
-            last_activity_dict = garmin_obj.get_last_activity() # (very unlineky event that this will be empty given Garmin's userbase, everyone should have at least one activity)
-            local_timediff = datetime.strptime(last_activity_dict['startTimeLocal'], '%Y-%m-%d %H:%M:%S') - datetime.strptime(last_activity_dict['startTimeGMT'], '%Y-%m-%d %H:%M:%S')
-        if local_timediff >= timedelta(0):
-            logging.info("Using user's local timezone as UTC+" + str(local_timediff))
-        else:
-            logging.info("Using user's local timezone as UTC-" + str(-local_timediff))
-    except (KeyError, TypeError) as err:
-        logging.warning(f"Unable to determine user's timezone - Defaulting to UTC. Consider providing TZ identifier with USER_TIMEZONE environment variable")
-        local_timediff = timedelta(hours=0)
-    
-    while True:
-        last_watch_sync_time_UTC = datetime.fromtimestamp(int(garmin_obj.get_device_last_used().get('lastUsedDeviceUploadTime')/1000)).astimezone(pytz.timezone("UTC"))
-        if last_influxdb_sync_time_UTC < last_watch_sync_time_UTC:
-            logging.info(f"Update found : Current watch sync time is {last_watch_sync_time_UTC} UTC")
-            fetch_write_bulk((last_influxdb_sync_time_UTC + local_timediff).strftime('%Y-%m-%d'), (last_watch_sync_time_UTC + local_timediff).strftime('%Y-%m-%d')) # Using local dates for deciding which dates to fetch in current iteration (see issue #25)
-            last_influxdb_sync_time_UTC = last_watch_sync_time_UTC
-        else:
-            logging.info(f"No new data found : Current watch and influxdb sync time is {last_watch_sync_time_UTC} UTC")
-        logging.info(f"waiting for {UPDATE_INTERVAL_SECONDS} seconds before next automatic update calls")
-        time.sleep(UPDATE_INTERVAL_SECONDS)
-
+    # %%
+    if MANUAL_START_DATE:
+        fetch_write_bulk(MANUAL_START_DATE, MANUAL_END_DATE)
+        logging.info(f"Bulk update success : Fetched all available health metrics for date range {MANUAL_START_DATE} to {MANUAL_END_DATE}")
+        exit(0)
+    else:
+        try:
+            if INFLUXDB_VERSION == "1":
+                last_influxdb_sync_time_UTC = pytz.utc.localize(datetime.strptime(list(influxdbclient.query(f"SELECT * FROM HeartRateIntraday ORDER BY time DESC LIMIT 1").get_points())[0]['time'],"%Y-%m-%dT%H:%M:%SZ"))
+            else:
+                last_influxdb_sync_time_UTC = pytz.utc.localize(influxdbclient.query(query="SELECT * FROM HeartRateIntraday ORDER BY time DESC LIMIT 1", language="influxql").to_pylist()[0]['time'])
+        except Exception as err:
+            logging.error(err)
+            logging.warning("No previously synced data found in local InfluxDB database, defaulting to 7 day initial fetching. Use specific start date ENV variable to bulk update past data")
+            last_influxdb_sync_time_UTC = (datetime.today() - timedelta(days=7)).astimezone(pytz.timezone("UTC"))
+        try:
+            if USER_TIMEZONE: # If provided by user, using that. 
+                local_timediff = datetime.now(tz=pytz.timezone(USER_TIMEZONE)).utcoffset()
+            else: # otherwise try to set automatically
+                last_activity_dict = garmin_obj.get_last_activity() # (very unlineky event that this will be empty given Garmin's userbase, everyone should have at least one activity)
+                local_timediff = datetime.strptime(last_activity_dict['startTimeLocal'], '%Y-%m-%d %H:%M:%S') - datetime.strptime(last_activity_dict['startTimeGMT'], '%Y-%m-%d %H:%M:%S')
+            if local_timediff >= timedelta(0):
+                logging.info("Using user's local timezone as UTC+" + str(local_timediff))
+            else:
+                logging.info("Using user's local timezone as UTC-" + str(-local_timediff))
+        except (KeyError, TypeError) as err:
+            logging.warning(f"Unable to determine user's timezone - Defaulting to UTC. Consider providing TZ identifier with USER_TIMEZONE environment variable")
+            local_timediff = timedelta(hours=0)
+        
+        while True:
+            last_watch_sync_time_UTC = datetime.fromtimestamp(int(garmin_obj.get_device_last_used().get('lastUsedDeviceUploadTime')/1000)).astimezone(pytz.timezone("UTC"))
+            if last_influxdb_sync_time_UTC < last_watch_sync_time_UTC:
+                logging.info(f"Update found : Current watch sync time is {last_watch_sync_time_UTC} UTC")
+                fetch_write_bulk((last_influxdb_sync_time_UTC + local_timediff).strftime('%Y-%m-%d'), (last_watch_sync_time_UTC + local_timediff).strftime('%Y-%m-%d')) # Using local dates for deciding which dates to fetch in current iteration (see issue #25)
+                last_influxdb_sync_time_UTC = last_watch_sync_time_UTC
+            else:
+                logging.info(f"No new data found : Current watch and influxdb sync time is {last_watch_sync_time_UTC} UTC")
+            logging.info(f"waiting for {UPDATE_INTERVAL_SECONDS} seconds before next automatic update calls")
+            time.sleep(UPDATE_INTERVAL_SECONDS)
