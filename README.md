@@ -21,7 +21,7 @@ A docker container to fetch data from Garmin servers and store the data in a loc
   - KUBERNETES : [Helm](./k8s/README.md) chart for Kubernetes. Try with minikube - [Makefile](./k8s/Makefile) for easy deployment.
 - **How to**
   - How to [pull historic (old) data](#historical-data-fetching-bulk-update) (bulk update)?
-  - How to [import from garmin connect local export files]([#importing-from-Garmin-connect-export](#importing-from-garmin-connect-export))?
+  - How to [import from garmin connect local export files](#importing-from-garmin-connect-export)?
   - How to [update to newer versions](#update-to-new-versions) of this project?
   - How to [export data as CSV files](#export-data-to-csv-files) for AI insights?
   - How to [backup the InfluxDB Database?](#backup-influxdb-database)
