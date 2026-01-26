@@ -1,3 +1,5 @@
+# Automatically run CI/Cd pipeline on update of this script. 
+
 """
 This script can be used to import data from a Garmin bulk export.
 
