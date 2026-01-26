@@ -68,7 +68,6 @@ influxdb:
       value: "{{ .Values.influxdb.auth.database }}"
     - name: INFLUXDB_HTTP_AUTH_ENABLED
       value: "true"
-
 garmin:
   image:
     repository: ghcr.io/arpanghosh8453/garmin-fetch-data
