@@ -63,13 +63,13 @@ Docker:
 
 ```
 # In ~/garmin-grafana
-docker compose exec --rm -v <path_to_fit_file>:/fit_file.fit garmin-fetch-data uv run garmin_grafana/fit_activity_importer.py
+docker compose run --rm -v <path_to_fit_file>:/fit_file.fit garmin-fetch-data uv run garmin_grafana/fit_activity_importer.py
 ```
 
 Example:
 
 ```
-docker compose exec --rm -v "~/Downloads/F129000.FIT":/fit_file.fit garmin-fetch-data uv run garmin_grafana/fit_activity_importer.py
+docker compose run --rm -v "~/Downloads/F129000.FIT":/fit_file.fit garmin-fetch-data uv run garmin_grafana/fit_activity_importer.py
 ```
 
 Python:
