@@ -62,4 +62,4 @@ jobs:
           helm push helm/charts/garmin-grafana-${{ env.IMAGE_TAG }}-helm.tgz \
               oci://registry-1.docker.io/${{ vars.IMAGE_REPO || env.IMAGE_REPO }}
           helm push helm/charts/garmin-grafana-${{ env.IMAGE_TAG }}-helm.tgz \
-              ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+              oci://ghcr.io/${{ github.repository_owner }}/
