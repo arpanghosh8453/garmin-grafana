@@ -187,8 +187,9 @@ class GarminBulkExport:
             a["startTimeGMT"] = datetime.fromtimestamp(
                 a["startTimeGmt"] / 1000, tz=timezone.utc
             ).strftime("%Y-%m-%d %H:%M:%S")
-            a["activityType"] = {"typeKey": a["activityType"]}
-            a["activityName"] = a["name"]
+            activity_type = a["activityType"]
+            a["activityName"] = a.get("name", activity_type)
+            a["activityType"] = {"typeKey": activity_type}
             a["averageSpeed"] = a.get("avgSpeed")
             a["maxHR"] = a.get("maxHr")
             a["averageHR"] = a.get("avgHr")
