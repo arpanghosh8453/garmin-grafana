@@ -13,7 +13,7 @@ env:
 jobs:
   build_and_push:
     name: Build Multi-Arch Docker Image and Push to Docker Hub & GHCR
-    if: ${{ github.repository == format('{0}/garmin-grafana', vars.IMAGE_REPO || 'thisisarpanghosh') }}
+    if: ${{ github.repository == format('{0}/garmin-grafana', vars.IMAGE_REPO || 'arpanghosh8453') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
