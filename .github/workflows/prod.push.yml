@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - 'src/garmin_grafana/garmin_fetch.py'
+      - 'src/garmin_grafana/influxdb_exporter.py'
+      - 'src/garmin_grafana/garmin_bulk_importer.py'
+      - 'src/garmin_grafana/fit_activity_importer.py'
       - 'src/garmin_grafana/__init__.py'
       - 'compose-example.yml'
       - 'pyproject.toml'
