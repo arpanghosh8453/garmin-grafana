@@ -1353,7 +1353,7 @@ def fetch_write_bulk(start_date_str, end_date_str):
                 repeat_loop = True
             except Exception as err:
                 if IGNORE_ERRORS:
-                    logging.warning("Failed to process %s:", current_date)
+                    logging.warning("IGNORE_ERRORS Enabled >> Failed to process %s:", current_date)
                     logging.exception(err)
                     repeat_loop = False
                 else:
