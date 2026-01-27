@@ -13,7 +13,7 @@ env:
 jobs:
   build_and_push:
     name: Build Multi-Arch Docker Image and Push to Docker Hub & GHCR
-    if: ${{ github.repository == 'arpanghosh8453/garmin-grafana' }}
+    if: ${{ github.repository == format('{0}/garmin-grafana', vars.IMAGE_REPO || 'arpanghosh8453') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -48,5 +48,18 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ env.IMAGE_REPO }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ vars.IMAGE_REPO || env.IMAGE_REPO }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
             ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
+      - name: Build Helm Chart
+        run: |
+          cd k8s
+          helm plugin install https://github.com/melmorabity/helm-kubeconform --version 0.6.4.1
+          helm dependency build
+          helm kubeconform --skip CustomResourceDefinition --summary .
+          helm package . -d helm/charts --version ${{ env.IMAGE_TAG }}-helm
+          helm repo index helm/charts --url https://${{ vars.IMAGE_REPO || env.IMAGE_REPO }}.github.io/garmin-grafana
+          helm push helm/charts/garmin-grafana-${{ env.IMAGE_TAG }}-helm.tgz \
+              oci://registry-1.docker.io/${{ vars.IMAGE_REPO || env.IMAGE_REPO }}
+          helm push helm/charts/garmin-grafana-${{ env.IMAGE_TAG }}-helm.tgz \
+              oci://ghcr.io/${{ github.repository_owner }}/

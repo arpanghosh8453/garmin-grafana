@@ -59,17 +59,23 @@ influxdb:
     #storageClass: ""
   auth:
     database: GarminStats
+    username: admin
+    password: password
+    adminUser: admin
+    adminPassword: password
   env:
     - name: INFLUXDB_DB
       value: "{{ .Values.influxdb.auth.database }}"
     - name: INFLUXDB_HTTP_AUTH_ENABLED
       value: "true"
-
 garmin:
   image:
     repository: ghcr.io/arpanghosh8453/garmin-fetch-data
     tag: v0.3.0
   port: 8000
+  credentials:
+    email: example@example.com
+    base64Password: password
   tokens:
     persistence:
       enabled: false

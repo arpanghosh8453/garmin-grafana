@@ -8,3 +8,4 @@ dependencies:
   - name: grafana
     version: 9.2.7
     repository: https://grafana.github.io/helm-charts
+    condition: grafana.enabled
