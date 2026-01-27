@@ -55,6 +55,9 @@ INFLUXDB_PORT = "<influxdb_external_port>" # This should be the port you mapped 
 uv run garmin_bulk_importer.py --bulk_data_path="~/Downloads/Garmin Export 2025-11-27" --start_date=2018-01-01 --end_date=2025-01-03
 ```
 
+> [!TIP]
+> If you would like to skip any missing data or formatting error and continue the import process, you can use the `--ignore_errors` flag with the garmin_bulk_importer.py as a command line argument
+
 ## Manually Import Activity .FIT files
 
 If you want to manually import .FIT files saved locally on your machine you can run the `fit_activity_importer.py` script. Follow the same instructions in the section above to setup your environment to run the script using either Docker or Python script directly. Replace the last step with either of the following:

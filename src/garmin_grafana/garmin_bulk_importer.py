@@ -1,4 +1,4 @@
-# Automatically run CI/Cd pipeline on update of this script. 
+# Automatically run CI/Cd pipeline on update of this script.
 
 """
 This script can be used to import data from a Garmin bulk export.
@@ -12,6 +12,7 @@ The currently supported imports are:
 Future work:
 * Add support for monitor .fit files.
 """
+import time
 import argparse
 from typing import List
 from pathlib import Path
@@ -189,7 +190,7 @@ class GarminBulkExport:
             a["startTimeGMT"] = datetime.fromtimestamp(
                 a["startTimeGmt"] / 1000, tz=timezone.utc
             ).strftime("%Y-%m-%d %H:%M:%S")
-            activity_type = a["activityType"]
+            activity_type = a.get("activityType")
             a["activityName"] = a.get("name", activity_type)
             a["activityType"] = {"typeKey": activity_type}
             a["averageSpeed"] = a.get("avgSpeed")
@@ -482,11 +483,16 @@ if __name__ == "__main__":
         default="/bulk_export",
         help="Path to a directory containing your Garmin data from the bulk export",
     )
-    parser.add_argument("--start_date", help="Optional tart date (YYYY-MM-DD).")
+    parser.add_argument("--start_date", help="Optional start date (YYYY-MM-DD).")
     parser.add_argument(
         "--end_date",
-        help="Required end date (YYYY-MM-DD)",
+        help="End date (YYYY-MM-DD)",
         default=datetime.today().strftime("%Y-%m-%d"),
+    )
+    parser.add_argument(
+        "--ignore_errors",
+        action="store_true",
+        help="If true, will ignore errors and continue processing data",
     )
     args = parser.parse_args()
 
@@ -503,6 +509,13 @@ if __name__ == "__main__":
     garmin_fetch.UPDATE_INTERVAL_SECONDS = 0
     garmin_fetch.RATE_LIMIT_CALLS_SECONDS = 0
     garmin_fetch.ALWAYS_PROCESS_FIT_FILES = True
+    garmin_fetch.IGNORE_ERRORS = args.ignore_errors
+
+    if garmin_fetch.IGNORE_ERRORS:
+        logging.info(
+            "IGNORE_ERRORS is enabled. We reccomend saving the output so that you can check for any failed imports afterwards."
+        )
+        time.sleep(5)
 
     # These are the only types of data that are included in the bulk export.
     garmin_fetch.FETCH_SELECTION = "daily_avg,sleep,activity,hydration"

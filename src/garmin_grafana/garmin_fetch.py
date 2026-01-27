@@ -1,4 +1,5 @@
 # %%
+import traceback
 import base64, requests, time, pytz, logging, os, sys, dotenv, io, zipfile
 from fitparse import FitFile, FitParseError
 from datetime import datetime, timedelta
@@ -67,6 +68,7 @@ TAG_MEASUREMENTS_WITH_USER_EMAIL = True if os.getenv("TAG_MEASUREMENTS_WITH_USER
 FORCE_REPROCESS_ACTIVITIES = False if os.getenv("FORCE_REPROCESS_ACTIVITIES") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional, will enable re-processing of fit files when set to true, may skip activities if set to false (issue #30)
 USER_TIMEZONE = os.getenv("USER_TIMEZONE", "") # optional, fetches timezone info from last activity automatically if left blank
 PARSED_ACTIVITY_ID_LIST = []
+IGNORE_ERRORS = True if os.getenv("IGNORE_ERRORS") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False
 
 # %%
 for handler in logging.root.handlers[:]:
@@ -1349,6 +1351,13 @@ def fetch_write_bulk(start_date_str, end_date_str):
                 garmin_obj = garmin_login()
                 time.sleep(5)
                 repeat_loop = True
+            except Exception as err:
+                if IGNORE_ERRORS:
+                    logging.warning("IGNORE_ERRORS Enabled >> Failed to process %s:", current_date)
+                    logging.exception(err)
+                    repeat_loop = False
+                else:
+                    raise err
 
 
 if __name__ == "__main__":
