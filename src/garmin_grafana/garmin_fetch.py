@@ -57,7 +57,7 @@ MAX_CONSECUTIVE_500_ERRORS = int(os.getenv("MAX_CONSECUTIVE_500_ERRORS", 10)) # 
 INFLUXDB_ENDPOINT_IS_HTTP = False if os.getenv("INFLUXDB_ENDPOINT_IS_HTTP") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional
 GARMIN_DEVICENAME_AUTOMATIC = False if GARMIN_DEVICENAME != "Unknown" else True # optional
 UPDATE_INTERVAL_SECONDS = int(os.getenv("UPDATE_INTERVAL_SECONDS", 300)) # optional
-FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,fitness_age,vo2,activity,race_prediction,body_composition") # additional available values are lactate_threshold,training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration,solar_intensity which you can add to the list seperated by , without any space
+FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,fitness_age,vo2,activity,race_prediction,body_composition,lifestyle") # additional available values are lactate_threshold,training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration,solar_intensity which you can add to the list seperated by , without any space
 LACTATE_THRESHOLD_SPORTS = os.getenv("LACTATE_THRESHOLD_SPORTS", "RUNNING").upper().split(",") # Garmin currently implements RUNNING, but has provisions for CYCLING, and SWIMMING
 KEEP_FIT_FILES = True if os.getenv("KEEP_FIT_FILES") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional
 FIT_FILE_STORAGE_LOCATION = os.getenv("FIT_FILE_STORAGE_LOCATION", os.path.join(os.path.expanduser("~"), "fit_filestore"))
@@ -1206,6 +1206,59 @@ def get_solar_intensity(date_str):
         logging.warning(f"No Solar Intensity data available for date {date_str}")
     return points_list
 
+# %%
+def get_lifestyle_data(date_str):
+    points_list = []
+    try:
+        logging.info(f"Fetching Lifestyle Journaling data for date {date_str}")
+        journal_data = garmin_obj.get_lifestyle_logging_data(date_str)
+        
+        daily_logs = journal_data.get('dailyLogsReport', [])
+        
+        for log in daily_logs:
+            behavior_name = log.get('name') or log.get('behavior')
+            if not behavior_name:
+                continue
+
+            category = log.get('category', 'UNKNOWN')
+            log_status = log.get('logStatus')
+            details = log.get('details', [])
+            
+            # status: 1 for YES, 0 for NO
+            status = 1 if log_status == "YES" else 0
+            
+            # value: sum of detail amounts if available, else 0.0
+            value = 0.0
+            if details:
+                for detail in details:
+                    amount = detail.get('amount')
+                    if amount is not None:
+                        value += float(amount)
+
+            fields = {
+                "status": status,
+                "value": value
+            }
+
+            points_list.append({
+                "measurement": "LifestyleJournal",
+                "time": pytz.timezone("UTC").localize(datetime.strptime(date_str, "%Y-%m-%d")).isoformat(),
+                "tags": {
+                    "Device": GARMIN_DEVICENAME,
+                    "Database_Name": INFLUXDB_DATABASE,
+                    "behavior": behavior_name,
+                    "category": category
+                },
+                "fields": fields
+            })
+            
+        logging.info(f"Success : Fetching Lifestyle Journaling data for date {date_str}")
+
+    except Exception as e:
+        logging.warning(f"Failed to fetch Lifestyle Journaling data for date {date_str}: {e}")
+    
+    return points_list
+
 
 # %%
 def daily_fetch_write(date_str):
@@ -1272,6 +1325,8 @@ def daily_fetch_write(date_str):
         write_points_to_influxdb(fetch_activity_GPS(activity_with_gps_id_dict))
     if 'solar_intensity' in FETCH_SELECTION:
         write_points_to_influxdb(get_solar_intensity(date_str))
+    if 'lifestyle' in FETCH_SELECTION:
+        write_points_to_influxdb(get_lifestyle_data(date_str))
 
 
 # %%

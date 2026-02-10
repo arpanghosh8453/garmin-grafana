@@ -76,7 +76,7 @@ dependencies = [
 requires-dist = [
     { name = "dotenv", specifier = "==0.9.9" },
     { name = "fitparse", specifier = "==1.2.0" },
-    { name = "garminconnect", specifier = "==0.2.26" },
+    { name = "garminconnect", specifier = ">=0.2.35" },
     { name = "influxdb", specifier = "==5.3.2" },
     { name = "influxdb3-python", specifier = "==0.12.0" },
     { name = "pandas", specifier = "==2.2.3" },
@@ -84,28 +84,28 @@ requires-dist = [
 
 [[package]]
 name = "garminconnect"
-version = "0.2.26"
+version = "0.2.38"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "garth" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/66/00/bf6114f834b4a1b4922eb413cbcdd68494a2e02cdf0aff4c4d7bcd2ad5f5/garminconnect-0.2.26.tar.gz", hash = "sha256:079692b9829f8e9aaeea5dcbcac2b3fa0851ac027432f561cb04441700ece025", size = 147924, upload_time = "2025-04-04T13:00:59.026Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/04/b5/c2d3c7fb53c98f74ef208b44b686e48f01cb6434d091f66593e29fd4d2ed/garminconnect-0.2.38.tar.gz", hash = "sha256:53f0d73e821dfa9e93731a6a1c81c34e689ce157c2751edd22dd462d4e4f9e04", size = 37502, upload_time = "2026-01-04T12:08:57.563Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9f/60/e971ccb635028c2d9cb2bd4d234990664af84f3fe9b998f7df3de8f695da/garminconnect-0.2.26-py3-none-any.whl", hash = "sha256:41ffbca72c9fb8679ee5c4aaa5270f9fc68d375a8055688cfcf80c7a4dd2c067", size = 84222, upload_time = "2025-04-04T13:00:56.426Z" },
+    { url = "https://files.pythonhosted.org/packages/91/dc/9e0b1eee113fedfefd6577de45205e33505fcdc1520d4d28ee4c339e9862/garminconnect-0.2.38-py3-none-any.whl", hash = "sha256:801f64834d8d2ff41f10679e4111fc157312550980b0e29b0c2f263fd628a604", size = 32733, upload_time = "2026-01-04T12:08:55.45Z" },
 ]
 
 [[package]]
 name = "garth"
-version = "0.5.3"
+version = "0.5.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "requests" },
     { name = "requests-oauthlib" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/92/60/339de0e3d01d2a4dac9f44f7c50d094b949c963573ddc5bb0b58eb54c9e3/garth-0.5.3.tar.gz", hash = "sha256:732a970a47e4a5def556a82e645380e1b3bf74e90a059904cc9e8154b0815850", size = 1752258, upload_time = "2025-03-13T04:27:58.139Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/14/1a/e559feb5efd53e9a5d15c28007a714e240a51363c79a306727977fe1999b/garth-0.5.21.tar.gz", hash = "sha256:8d979595d1d4ea23a1b466ab4a60955d139b71f886f46490be140fcee584dab4", size = 1840358, upload_time = "2026-01-07T23:12:33.828Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5e/ec/6e2e573fd11e486d92a7ee805b031325d88036690d076c2cdd1661915a41/garth-0.5.3-py3-none-any.whl", hash = "sha256:c5539bd1b2078ffc0188e7de93c823f06b7fe74399032bd35a2d259133bdf464", size = 24530, upload_time = "2025-03-13T04:27:56.717Z" },
+    { url = "https://files.pythonhosted.org/packages/c5/14/b7c77f363ff04cc0c57991277b8c3564df5210b0879894e2033f90f55ff5/garth-0.5.21-py3-none-any.whl", hash = "sha256:24b8c517ef24ef030bca14cf4e8d7ad7a191d9bc60ece6077fec6ea743a5d039", size = 33265, upload_time = "2026-01-07T23:12:32.069Z" },
 ]
 
 [[package]]
