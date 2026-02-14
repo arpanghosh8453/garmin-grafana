@@ -215,7 +215,9 @@ class GarminBulkExport:
             with open(p) as f:
                 data = json.load(f)
                 for stats in data:
-                    stats_date = stats["calendarDate"]
+                    if "calendarDate" not in stats:
+                        continue
+                    stats_date = stats.get("calendarDate")
                     if stats_date in sleep_stats:
                         self.fail(
                             f"Duplicate entries found for sleep stats dated on {stats_date}"
