@@ -223,7 +223,10 @@ def get_daily_stats(date_str):
                 "restingHeartRate": stats_json.get("restingHeartRate"),
                 "minAvgHeartRate": stats_json.get("minAvgHeartRate"),
                 "maxAvgHeartRate": stats_json.get("maxAvgHeartRate"),
-                
+
+                "avgSkinTempDeviationC": stats_json.get("avgSkinTempDeviationC"),
+                "avgSkinTempDeviationF": stats_json.get("avgSkinTempDeviationF"),
+
                 "stressDuration": stats_json.get("stressDuration"),
                 "restStressDuration": stats_json.get("restStressDuration"),
                 "activityStressDuration": stats_json.get("activityStressDuration"),
@@ -318,7 +321,9 @@ def get_sleep_data(date_str):
             "restlessMomentsCount": all_sleep_data.get("restlessMomentsCount"),
             "avgOvernightHrv": all_sleep_data.get("avgOvernightHrv"),
             "bodyBatteryChange": all_sleep_data.get("bodyBatteryChange"),
-            "restingHeartRate": all_sleep_data.get("restingHeartRate")
+            "restingHeartRate": all_sleep_data.get("restingHeartRate"),
+            "avgSkinTempDeviationC": all_sleep_data.get("avgSkinTempDeviationC"),
+            "avgSkinTempDeviationF": all_sleep_data.get("avgSkinTempDeviationF")
             }
         })
     sleep_movement_intraday = all_sleep_data.get("sleepMovement")
