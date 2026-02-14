@@ -653,6 +653,7 @@ def get_activity_summary(date_str):
                     "Activity_ID": activity.get('activityId'),
                     'Device_ID': activity.get('deviceId'),
                     'activityName': activity.get('activityName'),
+                    'description': activity.get('description'),
                     'activityType': (activity.get('activityType') or {}).get('typeKey',None),
                     'distance': activity.get('distance'),
                     'elapsedDuration': activity.get('elapsedDuration'),
