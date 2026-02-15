@@ -839,7 +839,11 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "Avg_HR": lap_record.get('avg_heart_rate', None),
                                     "Max_HR": lap_record.get('max_heart_rate', None),
                                     "Avg_Cadence": lap_record.get('avg_cadence', None),
-                                    "Avg_Temperature": lap_record.get('avg_temperature', None)
+                                    "Avg_Temperature": lap_record.get('avg_temperature', None),
+                                    "Avg_Vertical_Oscillation": lap_record.get('avg_vertical_oscillation', None),
+                                    "Avg_Stance_Time": lap_record.get('avg_stance_time', None),
+                                    "Avg_Vertical_Ratio": lap_record.get('avg_vertical_ratio', None),
+                                    "Avg_Step_Length": lap_record.get('avg_step_length', None)
                                 }
                             }
                             points_list.append(point)
