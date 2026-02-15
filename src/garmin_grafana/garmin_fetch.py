@@ -752,7 +752,11 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "Fractional_Cadence": parsed_record.get('fractional_cadence', None),
                                     "Temperature": parsed_record.get('temperature', None),
                                     "Accumulated_Power": parsed_record.get('accumulated_power', None),
-                                    "Power": parsed_record.get('power', None)
+                                    "Power": parsed_record.get('power', None),
+                                    "Vertical_Oscillation": parsed_record.get('vertical_oscillation', None),
+                                    "Stance_Time": parsed_record.get('stance_time', None),
+                                    "Vertical_Ratio": parsed_record.get('vertical_ratio', None),
+                                    "Step_Length": parsed_record.get('step_length', None)
                                 }
                             }
                             points_list.append(point)
