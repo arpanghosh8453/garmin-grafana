@@ -721,6 +721,7 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                     all_sessions_list = [record.get_values() for record in fitfile.get_messages('session')]
                     all_lengths_list = [record.get_values() for record in fitfile.get_messages('length')]
                     all_laps_list = [record.get_values() for record in fitfile.get_messages('lap')]
+                    all_sets_list = [record.get_values() for record in fitfile.get_messages('set')]
                     if len(all_records_list) == 0:
                         raise FileNotFoundError(f"No records found in FIT file for Activity ID {activityID} - Discarding FIT file")
                     else:
@@ -777,12 +778,16 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "Activity_ID": activityID,
                                     "Sport": str(session_record.get('sport', None)), # Avoid partial write error 400 see #152#issuecomment-3084539416
                                     "Sub_Sport": session_record.get('sub_sport', None),
+                                    "Total_Elapsed_Time": session_record.get('total_elapsed_time', None),
                                     "Pool_Length": session_record.get('pool_length', None),
                                     "Pool_Length_Unit": session_record.get('pool_length_unit', None),
                                     "Lengths": session_record.get('num_laps', None),
                                     "Laps": session_record.get('num_lengths', None),
                                     "Aerobic_Training": session_record.get('total_training_effect', None),
                                     "Anaerobic_Training": session_record.get('total_anaerobic_training_effect', None),
+                                    "Work_Time": session_record.get('work_time', None),
+                                    "Total_Sets": session_record.get('total_sets', None),
+                                    "Volume": session_record.get('volume', None),                                    
                                     "Primary_Benefit": session_record.get('primary_benefit', None),
                                     "Recovery_Time": session_record.get('recovery_time', None)
                                 }
@@ -849,6 +854,39 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "Avg_Vertical_Ratio": lap_record.get('avg_vertical_ratio', None),
                                     "Avg_Step_Length": lap_record.get('avg_step_length', None)
                                 }
+                            }
+                            points_list.append(point)
+                    for set_record in all_sets_list:
+                        if set_record.get('start_time') or set_record.get('timestamp'):
+                            fields = {
+                                "Index": int(set_record.get('message_index', -1)) + 1,
+                                "ActivityName": activity_type,
+                                "Activity_ID": activityID,
+                                "Duration": set_record.get('duration'),
+                                "Repetitions": set_record.get('repetitions'),
+                                "Weight": set_record.get('weight'),
+                                "Set_Type": set_record.get('set_type')
+                            }
+                            category = set_record.get('category')
+                            if isinstance(category, tuple): # Influxdb can't handle list/tuple field values - converting to string with values separated by "_" if multiple category values are present
+                                category = "_".join(str(x) for x in category if x is not None)
+                            if category:
+                                fields["Category"] = category
+                            subcategory = set_record.get('category_subtype')
+                            if isinstance(subcategory, tuple):
+                                subcategory = "_".join(str(x) for x in subcategory if x is not None)
+                            if subcategory:
+                                fields["Category_Subtype"] = subcategory
+                            point = {
+                                "measurement": "ActivitySet",
+                                "time": set_record['start_time'].replace(tzinfo=pytz.UTC).isoformat() or set_record['timestamp'].replace(tzinfo=pytz.UTC).isoformat(),
+                                "tags": {
+                                    "Device": GARMIN_DEVICENAME,
+                                    "Database_Name": INFLUXDB_DATABASE,
+                                    "ActivityID": activityID,
+                                    "ActivitySelector": activity_start_time.strftime('%Y%m%dT%H%M%SUTC-') + activity_type
+                                },
+                                "fields": fields
                             }
                             points_list.append(point)
                     if KEEP_FIT_FILES:
