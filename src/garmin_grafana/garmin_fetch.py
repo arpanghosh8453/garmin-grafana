@@ -640,6 +640,38 @@ def get_activity_summary(date_str):
                 logging.warning(f"Activity ID {activity.get('activityId')} got no GPS data - yet, activity FIT file data will be processed as ALWAYS_PROCESS_FIT_FILES is on")
             activity_with_gps_id_dict[activity.get('activityId')] = (activity.get('activityType') or {}).get('typeKey', "Unknown")
         if "startTimeGMT" in activity: # "startTimeGMT" should be available for all activities (fix #13)
+            if activity.get('activityType').get('typeKey') == "strength_training":
+                logging.info(f"Processing : Fetching strength_training sets for activity ID {activity.get('activityId')}.")
+                if(activity.get("summarizedExerciseSets")):
+                    start_time = datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC)
+                    activity_sets = activity.get("summarizedExerciseSets")
+                    if activity_sets:
+                        for exercise_number, exercises in enumerate(activity_sets):
+                            fields = {
+                                "exerciseNumber": exercise_number + 1,
+                                "exerciceDuration": exercises.get("duration"),
+                                "category": str(exercises.get("category") or "UNKNOWN"),
+                                "subCategory": str(exercises.get("subCategory") or "NONE"),
+                                "sets": exercises.get("sets", 0),
+                                "reps": exercises.get("reps", 0),
+                                "maxWeight": exercises.get("maxWeight", 0),
+                                "volume": exercises.get("volume", 0),
+                            }
+                            point = {
+                                "measurement": "ActivitySummary",
+                                "time": (start_time + timedelta(milliseconds=exercises.get("duration", 0))).isoformat(),
+                                "tags": {
+                                    "Device": GARMIN_DEVICENAME,
+                                    "Database_Name": INFLUXDB_DATABASE,
+                                    "ActivityID": activity.get('activityId'),
+                                    "ActivitySelector": datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC).strftime('%Y%m%dT%H%M%SUTC-') + (activity.get('activityType') or {}).get('typeKey', "Unknown"),
+                                },
+                                "fields": fields
+                            }
+                            start_time += timedelta(milliseconds=exercises.get("duration", 0))
+                            points_list.append(point)
+                else:
+                    logging.warning(f"Activity ID {activity.get('activityId')} got no sets data yet. It won't be processed.")
             points_list.append({
                 "measurement":  "ActivitySummary",
                 "time": datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC).isoformat(),
@@ -721,7 +753,6 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                     all_sessions_list = [record.get_values() for record in fitfile.get_messages('session')]
                     all_lengths_list = [record.get_values() for record in fitfile.get_messages('length')]
                     all_laps_list = [record.get_values() for record in fitfile.get_messages('lap')]
-                    all_sets_list = [record.get_values() for record in fitfile.get_messages('set')]
                     if len(all_records_list) == 0:
                         raise FileNotFoundError(f"No records found in FIT file for Activity ID {activityID} - Discarding FIT file")
                     else:
@@ -778,16 +809,12 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "Activity_ID": activityID,
                                     "Sport": str(session_record.get('sport', None)), # Avoid partial write error 400 see #152#issuecomment-3084539416
                                     "Sub_Sport": session_record.get('sub_sport', None),
-                                    "Total_Elapsed_Time": session_record.get('total_elapsed_time', None),
                                     "Pool_Length": session_record.get('pool_length', None),
                                     "Pool_Length_Unit": session_record.get('pool_length_unit', None),
                                     "Lengths": session_record.get('num_laps', None),
                                     "Laps": session_record.get('num_lengths', None),
                                     "Aerobic_Training": session_record.get('total_training_effect', None),
                                     "Anaerobic_Training": session_record.get('total_anaerobic_training_effect', None),
-                                    "Work_Time": session_record.get('work_time', None),
-                                    "Total_Sets": session_record.get('total_sets', None),
-                                    "Volume": session_record.get('volume', None),                                    
                                     "Primary_Benefit": session_record.get('primary_benefit', None),
                                     "Recovery_Time": session_record.get('recovery_time', None)
                                 }
@@ -854,39 +881,6 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "Avg_Vertical_Ratio": lap_record.get('avg_vertical_ratio', None),
                                     "Avg_Step_Length": lap_record.get('avg_step_length', None)
                                 }
-                            }
-                            points_list.append(point)
-                    for set_record in all_sets_list:
-                        if set_record.get('start_time') or set_record.get('timestamp'):
-                            fields = {
-                                "Index": int(set_record.get('message_index', -1)) + 1,
-                                "ActivityName": activity_type,
-                                "Activity_ID": activityID,
-                                "Duration": set_record.get('duration'),
-                                "Repetitions": set_record.get('repetitions'),
-                                "Weight": set_record.get('weight'),
-                                "Set_Type": set_record.get('set_type')
-                            }
-                            category = set_record.get('category')
-                            if isinstance(category, tuple): # Influxdb can't handle list/tuple field values - converting to string with values separated by "_" if multiple category values are present
-                                category = "_".join(str(x) for x in category if x is not None)
-                            if category:
-                                fields["Category"] = category
-                            subcategory = set_record.get('category_subtype')
-                            if isinstance(subcategory, tuple):
-                                subcategory = "_".join(str(x) for x in subcategory if x is not None)
-                            if subcategory:
-                                fields["Category_Subtype"] = subcategory
-                            point = {
-                                "measurement": "ActivitySet",
-                                "time": set_record['start_time'].replace(tzinfo=pytz.UTC).isoformat() or set_record['timestamp'].replace(tzinfo=pytz.UTC).isoformat(),
-                                "tags": {
-                                    "Device": GARMIN_DEVICENAME,
-                                    "Database_Name": INFLUXDB_DATABASE,
-                                    "ActivityID": activityID,
-                                    "ActivitySelector": activity_start_time.strftime('%Y%m%dT%H%M%SUTC-') + activity_type
-                                },
-                                "fields": fields
                             }
                             points_list.append(point)
                     if KEEP_FIT_FILES:
