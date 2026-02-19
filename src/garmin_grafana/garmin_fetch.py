@@ -666,11 +666,11 @@ def get_activity_summary(date_str):
                     'maxHR': activity.get('maxHR'),
                     'locationName': activity.get('locationName'),
                     'lapCount': activity.get('lapCount'),
-                    'hrTimeInZone_1': activity.get('hrTimeInZone_1'),
-                    'hrTimeInZone_2': activity.get('hrTimeInZone_2'),
-                    'hrTimeInZone_3': activity.get('hrTimeInZone_3'),
-                    'hrTimeInZone_4': activity.get('hrTimeInZone_4'),
-                    'hrTimeInZone_5': activity.get('hrTimeInZone_5'),
+                    'hrTimeInZone_1': int(val) if (val := activity.get('hrTimeInZone_1')) is not None else None,
+                    'hrTimeInZone_2': int(val) if (val := activity.get('hrTimeInZone_2')) is not None else None,
+                    'hrTimeInZone_3': int(val) if (val := activity.get('hrTimeInZone_3')) is not None else None,
+                    'hrTimeInZone_4': int(val) if (val := activity.get('hrTimeInZone_4')) is not None else None,
+                    'hrTimeInZone_5': int(val) if (val := activity.get('hrTimeInZone_5')) is not None else None,
                 }
             })
             points_list.append({
