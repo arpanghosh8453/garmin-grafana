@@ -22,10 +22,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY --from=build /app/.venv /app/.venv
-COPY --from=build /app/src /app/src
+RUN groupadd --gid 1000 appuser && useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser
 
-RUN groupadd --gid 1000 appuser && useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser && chown -R appuser:appuser /app
+COPY --chown=appuser:appuser --from=build /app/.venv /app/.venv
+COPY --chown=appuser:appuser --from=build /app/src /app/src
+
 USER appuser
 
 CMD ["python", "src/garmin_grafana/garmin_fetch.py"]
