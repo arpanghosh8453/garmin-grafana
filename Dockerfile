@@ -12,7 +12,6 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends build-essential \
  && rm -rf /var/lib/apt/lists/*
 RUN uv sync --locked
-COPY src ./src
 
 FROM python:3.13-slim-bookworm AS runtime
 
@@ -25,7 +24,7 @@ WORKDIR /app
 RUN groupadd --gid 1000 appuser && useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser
 
 COPY --chown=appuser:appuser --from=build /app/.venv /app/.venv
-COPY --chown=appuser:appuser --from=build /app/src /app/src
+COPY --chown=appuser:appuser src ./src
 
 USER appuser
 
