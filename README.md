@@ -261,16 +261,16 @@ There are two ways to export the data into CSV files.
 1. Use the native CSV export functionality of Grafana, where you can export the data shown on any Grafana panel using [this guide](https://grafana.com/blog/2024/05/30/how-to-export-any-grafana-visualization-to-a-csv-file-microsoft-excel-or-google-sheets/) as CSV.
 2. If the above method is tedious and you want to grab all measurements in detail as CSV files with one command directly from the local InfluxDB database, a convenient exporter script is provided with this project (included inside the docker container).
 
-   2.1 Simply run the following docker command from your terminal `docker exec garmin-fetch-data uv run /app/garmin_grafana/influxdb_exporter.py` to export the last 30 days data. The script takes additional arguments such as `last-n-days` or `start-date` and `end-date` if you want to export data for last n days or for a specific date range. You should run the command like
+   2.1 Simply run the following docker command from your terminal `docker exec garmin-fetch-data python /app/garmin_grafana/influxdb_exporter.py` to export the last 30 days data. The script takes additional arguments such as `last-n-days` or `start-date` and `end-date` if you want to export data for last n days or for a specific date range. You should run the command like
 
    ```
-   docker exec garmin-fetch-data uv run /app/garmin_grafana/influxdb_exporter.py --last-n-days=7
+   docker exec garmin-fetch-data python /app/garmin_grafana/influxdb_exporter.py --last-n-days=7
    ```
 
    or
 
    ```
-   docker exec garmin-fetch-data uv run /app/garmin_grafana/influxdb_exporter.py --start-date=2025-01-01 --end-date=2025-03-01
+   docker exec garmin-fetch-data python /app/garmin_grafana/influxdb_exporter.py --start-date=2025-01-01 --end-date=2025-03-01
    ```
 
    2.2 When the export is finished, you will see an output file path in the format ` Exported N measurement CSVs into /tmp/GarminStats_Export_XYZ.zip`. The zip filename will vary based on when you run the command and how many days you selected. Take note of the full export path name.

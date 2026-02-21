@@ -24,8 +24,8 @@ WORKDIR /app
 RUN groupadd --gid 1000 appuser && useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser
 
 COPY --chown=appuser:appuser --from=build /app/.venv /app/.venv
-COPY --chown=appuser:appuser src ./src
+COPY --chown=appuser:appuser src /app/
 
 USER appuser
 
-CMD ["python", "src/garmin_grafana/garmin_fetch.py"]
+CMD ["python", "garmin_grafana/garmin_fetch.py"]
