@@ -1,0 +1,62 @@
+services:
+  garmin-fetch-data:
+    build:
+      context: .
+      target: distroless
+    image: garmin-fetch-data:lean-distroless
+    container_name: garmin-fetch-data
+    restart: unless-stopped
+    depends_on:
+      - influxdb
+    volumes:
+      # For distroless nonroot image, this maps to /home/nonroot/.garminconnect
+      - ./garminconnect-tokens:/home/nonroot/.garminconnect
+    environment:
+      - INFLUXDB_HOST=influxdb
+      - INFLUXDB_PORT=8086
+      - INFLUXDB_USERNAME=influxdb_user
+      - INFLUXDB_PASSWORD=influxdb_secret_password
+      - INFLUXDB_DATABASE=GarminStats
+      - INFLUXDB_ENDPOINT_IS_HTTP=True
+      - GARMINCONNECT_IS_CN=False
+      # Optional login envs (if not set, first run prompts interactively)
+      # - GARMINCONNECT_EMAIL=your_email@example.com
+      # - GARMINCONNECT_BASE64_PASSWORD=your_base64_encoded_password
+      # Optional runtime tuning
+      # - LOG_LEVEL=INFO
+      # - UPDATE_INTERVAL_SECONDS=300
+      # - FETCH_SELECTION=daily_avg,sleep,steps,heartrate,stress,breathing,hrv,vo2,activity
+
+  influxdb:
+    image: influxdb:1.11
+    container_name: influxdb
+    restart: unless-stopped
+    environment:
+      - INFLUXDB_DB=GarminStats
+      - INFLUXDB_USER=influxdb_user
+      - INFLUXDB_USER_PASSWORD=influxdb_secret_password
+      - INFLUXDB_DATA_INDEX_VERSION=tsi1
+    expose:
+      - "8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_PLUGINS_PREINSTALL=marcusolsson-hourly-heatmap-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./Grafana_Datasource:/etc/grafana/provisioning/datasources
+      - ./Grafana_Dashboard:/etc/grafana/provisioning/dashboards
+    ports:
+      - "3000:3000"
+
+volumes:
+  influxdb_data:
+  grafana_data:
+

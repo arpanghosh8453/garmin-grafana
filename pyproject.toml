@@ -5,12 +5,9 @@ description = "A Python application to fetch Garmin health data and populate it 
 readme = "README.md"
 requires-python = "==3.13.*"
 dependencies = [
-    "dotenv==0.9.9",
     "fitparse==1.2.0",
     "garminconnect>=0.2.35",
     "influxdb==5.3.2",
-    "influxdb3-python==0.12.0",
-    "pandas==2.2.3",
 ]
 
 [project.scripts]

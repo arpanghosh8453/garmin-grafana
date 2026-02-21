@@ -1,6 +1,11 @@
 # syntax=docker/dockerfile:1
+# check=skip=SecretsUsedInArgOrEnv
 
-FROM ghcr.io/astral-sh/uv:0.6.17-python3.13-bookworm-slim AS build
+ARG PYTHON_VERSION=3.13
+ARG DEBIAN_VERSION=bookworm
+
+FROM ghcr.io/astral-sh/uv:0.6.17-python${PYTHON_VERSION}-${DEBIAN_VERSION}-slim AS build
+ARG PYTHON_VERSION
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -13,7 +18,8 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 RUN uv sync --locked
 
-FROM python:3.13-slim-bookworm AS runtime
+FROM python:${PYTHON_VERSION}-slim-${DEBIAN_VERSION} AS runtime
+ARG PYTHON_VERSION
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -29,3 +35,21 @@ COPY --chown=appuser:appuser src /app/
 USER appuser
 
 CMD ["python", "garmin_grafana/garmin_fetch.py"]
+
+FROM gcr.io/distroless/python3-debian13:nonroot AS distroless
+ARG PYTHON_VERSION
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    HOME="/home/nonroot" \
+    TOKEN_DIR="/home/nonroot/.garminconnect" \
+    PYTHONPATH="/app/.venv/lib/python${PYTHON_VERSION}/site-packages:/app"
+
+WORKDIR /app
+
+COPY --chown=nonroot:nonroot --from=build /app/.venv/lib/python${PYTHON_VERSION}/site-packages /app/.venv/lib/python${PYTHON_VERSION}/site-packages
+COPY --chown=nonroot:nonroot src /app/
+
+USER nonroot:nonroot
+
+CMD ["/usr/bin/python3", "garmin_grafana/garmin_fetch.py"]
