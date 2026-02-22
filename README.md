@@ -2,9 +2,12 @@
 <img src="https://i.imgur.com/PYsbwqj.png" width="450" height="164" align="center">
 </p>
 
-# Garmin Grafana
+# Grafana for Garmin Dashboard
 
 A docker container to fetch data from Garmin servers and store the data in a local influxdb database for appealing visualization with Grafana.
+
+> [!IMPORTANT]
+> Garmin is a registered trademark of Garmin Ltd. or its subsidiaries. Grafana is a registered trademark of Grafana Labs. This project is an independent, open-source tool and is not affiliated with, endorsed by, sponsored by, or approved by Garmin Ltd. or Grafana Labs.
 
 > [!TIP]
 > If you are a **Fitbit user**, please check out the [sister project](https://github.com/arpanghosh8453/fitbit-grafana) made for Fitbit
