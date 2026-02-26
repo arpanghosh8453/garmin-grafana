@@ -1,0 +1,14 @@
+name: Codeberg sync
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"
+
+jobs:
+  call-codeberg-sync:
+    uses: arpanghosh8453/codeberg-sync/.github/workflows/codeberg-sync.yml@main
+    secrets:
+      CODEBERG_TOKEN: ${{ secrets.CODEBERG_TOKEN }}
