@@ -640,6 +640,38 @@ def get_activity_summary(date_str):
                 logging.warning(f"Activity ID {activity.get('activityId')} got no GPS data - yet, activity FIT file data will be processed as ALWAYS_PROCESS_FIT_FILES is on")
             activity_with_gps_id_dict[activity.get('activityId')] = (activity.get('activityType') or {}).get('typeKey', "Unknown")
         if "startTimeGMT" in activity: # "startTimeGMT" should be available for all activities (fix #13)
+            if activity.get('activityType').get('typeKey') == "strength_training":
+                logging.info(f"Processing : Fetching strength_training sets for activity ID {activity.get('activityId')}.")
+                if(activity.get("summarizedExerciseSets")):
+                    start_time = datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC)
+                    activity_sets = activity.get("summarizedExerciseSets")
+                    if activity_sets:
+                        for exercise_number, exercises in enumerate(activity_sets):
+                            fields = {
+                                "exerciseNumber": exercise_number + 1,
+                                "exerciceDuration": exercises.get("duration"),
+                                "category": str(exercises.get("category") or "UNKNOWN"),
+                                "subCategory": str(exercises.get("subCategory") or "NONE"),
+                                "sets": exercises.get("sets", 0),
+                                "reps": exercises.get("reps", 0),
+                                "maxWeight": exercises.get("maxWeight", 0),
+                                "volume": exercises.get("volume", 0),
+                            }
+                            point = {
+                                "measurement": "ActivitySummary",
+                                "time": (start_time + timedelta(milliseconds=exercises.get("duration", 0))).isoformat(),
+                                "tags": {
+                                    "Device": GARMIN_DEVICENAME,
+                                    "Database_Name": INFLUXDB_DATABASE,
+                                    "ActivityID": activity.get('activityId'),
+                                    "ActivitySelector": datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC).strftime('%Y%m%dT%H%M%SUTC-') + (activity.get('activityType') or {}).get('typeKey', "Unknown"),
+                                },
+                                "fields": fields
+                            }
+                            start_time += timedelta(milliseconds=exercises.get("duration", 0))
+                            points_list.append(point)
+                else:
+                    logging.warning(f"Activity ID {activity.get('activityId')} got no sets data yet. It won't be processed.")
             points_list.append({
                 "measurement":  "ActivitySummary",
                 "time": datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC).isoformat(),
