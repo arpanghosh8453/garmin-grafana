@@ -6902,6 +6902,10 @@
                 "value": 179
               },
               {
+                "id": "min",
+                "value": 0
+              },
+              {
                 "id": "color",
                 "value": {
                   "fixedColor": "semi-dark-green",
@@ -6953,6 +6957,10 @@
                 "value": 186
               },
               {
+                "id": "min",
+                "value": 0
+              },
+              {
                 "id": "color",
                 "value": {
                   "fixedColor": "purple",
@@ -6974,6 +6982,10 @@
               {
                 "id": "custom.width",
                 "value": 199
+              },
+              {
+                "id": "min",
+                "value": 0
               },
               {
                 "id": "color",
