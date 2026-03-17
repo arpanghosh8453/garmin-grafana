@@ -633,12 +633,25 @@ def get_body_composition(date_str):
 def get_activity_summary(date_str):
     points_list = []
     activity_with_gps_id_dict = {}
+    strength_activity_id_dict = {}
     activity_list = garmin_obj.get_activities_by_date(date_str, date_str)
     for activity in activity_list:
+        activity_type_key = (activity.get('activityType') or {}).get('typeKey', "Unknown")
         if activity.get('hasPolyline') or ALWAYS_PROCESS_FIT_FILES: # will process FIT files lacking GPS data if ALWAYS_PROCESS_FIT_FILES is set to True
             if not activity.get('hasPolyline'):
                 logging.warning(f"Activity ID {activity.get('activityId')} got no GPS data - yet, activity FIT file data will be processed as ALWAYS_PROCESS_FIT_FILES is on")
-            activity_with_gps_id_dict[activity.get('activityId')] = (activity.get('activityType') or {}).get('typeKey', "Unknown")
+            activity_with_gps_id_dict[activity.get('activityId')] = activity_type_key
+        # Collect strength training activities for API-based exercise set fetching
+        if 'strength' in activity_type_key.lower() and activity.get('startTimeGMT'):
+            strength_activity_id_dict[activity.get('activityId')] = {
+                'typeKey': activity_type_key,
+                'startTimeGMT': activity.get('startTimeGMT'),
+                'activityName': activity.get('activityName'),
+                'summarizedExerciseSets': activity.get('summarizedExerciseSets', []),
+                'totalSets': activity.get('totalSets'),
+                'totalReps': activity.get('totalReps'),
+                'activeSets': activity.get('activeSets'),
+            }
         if "startTimeGMT" in activity: # "startTimeGMT" should be available for all activities (fix #13)
             points_list.append({
                 "measurement":  "ActivitySummary",
@@ -671,6 +684,15 @@ def get_activity_summary(date_str):
                     'hrTimeInZone_3': int(val) if (val := activity.get('hrTimeInZone_3')) is not None else None,
                     'hrTimeInZone_4': int(val) if (val := activity.get('hrTimeInZone_4')) is not None else None,
                     'hrTimeInZone_5': int(val) if (val := activity.get('hrTimeInZone_5')) is not None else None,
+                    # Strength training specific fields (populated for strength_training activities)
+                    'totalSets': activity.get('totalSets'),
+                    'totalReps': activity.get('totalReps'),
+                    'activeSets': activity.get('activeSets'),
+                    'aerobicTrainingEffect': activity.get('aerobicTrainingEffect'),
+                    'anaerobicTrainingEffect': activity.get('anaerobicTrainingEffect'),
+                    'activityTrainingLoad': activity.get('activityTrainingLoad'),
+                    'moderateIntensityMinutes': activity.get('moderateIntensityMinutes'),
+                    'vigorousIntensityMinutes': activity.get('vigorousIntensityMinutes'),
                 }
             })
             points_list.append({
@@ -692,7 +714,148 @@ def get_activity_summary(date_str):
             logging.info(f"Success : Fetching Activity summary with id {activity.get('activityId')} for date {date_str}")
         else:
             logging.warning(f"Skipped : Start Timestamp missing for activity id {activity.get('activityId')} for date {date_str}")
-    return points_list, activity_with_gps_id_dict
+    return points_list, activity_with_gps_id_dict, strength_activity_id_dict
+
+# %%
+def get_strength_training_data(strength_activity_id_dict):
+    """Fetch strength training exercise sets and HR zones from Garmin Connect API.
+    Uses API data (not FIT files) to get corrected exercise names and details.
+    See: https://github.com/arpanghosh8453/garmin-grafana/issues/189
+    """
+    points_list = []
+    for activity_id, activity_info in strength_activity_id_dict.items():
+        activity_type = activity_info['typeKey']
+        start_time_str = activity_info['startTimeGMT']
+        activity_start_time = datetime.strptime(start_time_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC)
+        activity_selector = activity_start_time.strftime('%Y%m%dT%H%M%SUTC-') + activity_type
+        activity_name = activity_info.get('activityName', activity_type)
+
+        # Write summarized exercise sets from activity list (workout-level summary per exercise group)
+        summarized_sets = activity_info.get('summarizedExerciseSets', []) or []
+        for idx, s in enumerate(summarized_sets):
+            category = s.get('category', 'UNKNOWN')
+            sub_category = s.get('subCategory', '')
+            exercise_label = f"{category}/{sub_category}" if sub_category else category
+            max_weight = s.get('maxWeight', 0)
+            volume = s.get('volume', 0)
+            data_fields = {
+                "Activity_ID": activity_id,
+                "ActivityName": activity_name,
+                "ExerciseIndex": idx + 1,
+                "Category": category,
+                "SubCategory": sub_category if sub_category else None,
+                "ExerciseLabel": exercise_label,
+                "TotalReps": s.get('reps'),
+                "TotalSets": s.get('sets'),
+                "MaxWeight_g": max_weight,
+                "MaxWeight_kg": max_weight / 1000.0 if max_weight else 0.0,
+                "Volume_g": volume,
+                "Volume_kg": volume / 1000.0 if volume else 0.0,
+                "Duration_ms": s.get('duration'),
+            }
+            points_list.append({
+                "measurement": "StrengthExerciseSummary",
+                "time": (activity_start_time + timedelta(milliseconds=idx)).isoformat(),
+                "tags": {
+                    "Device": GARMIN_DEVICENAME,
+                    "Database_Name": INFLUXDB_DATABASE,
+                    "ActivityID": activity_id,
+                    "ActivitySelector": activity_selector,
+                    "ExerciseCategory": category,
+                    "ExerciseLabel": exercise_label,
+                },
+                "fields": data_fields
+            })
+
+        # Fetch detailed exercise sets from Garmin API (individual set-level data)
+        try:
+            exercise_sets_data = garmin_obj.get_activity_exercise_sets(activity_id)
+            exercises = exercise_sets_data.get('exerciseSets', []) or []
+            set_counter = 0
+            for exercise in exercises:
+                set_type = exercise.get('setType', '')
+                # Skip REST sets, only process ACTIVE sets
+                if set_type == 'REST':
+                    continue
+                set_counter += 1
+                # Exercise category/name are nested inside an 'exercises' array
+                exercise_info = (exercise.get('exercises') or [{}])[0]
+                category = exercise_info.get('category', 'UNKNOWN')
+                exercise_name = exercise_info.get('name', '')
+                exercise_label = f"{category}/{exercise_name}" if exercise_name else category
+                # Weight from API is in grams (same as summarizedExerciseSets)
+                weight_g = float(exercise.get('weight', 0) or 0)
+                weight_kg = weight_g / 1000.0
+                # Duration from API is in seconds
+                duration_s = float(exercise.get('duration', 0) or 0)
+                start_ts = exercise.get('startTime')
+                if start_ts:
+                    # API returns ISO format string like '2026-03-17T15:32:33.0'
+                    set_time = datetime.strptime(start_ts.split('.')[0], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=pytz.UTC).isoformat()
+                else:
+                    set_time = (activity_start_time + timedelta(seconds=set_counter)).isoformat()
+
+                data_fields = {
+                    "Activity_ID": activity_id,
+                    "ActivityName": activity_name,
+                    "SetOrder": exercise.get('setOrder', set_counter),
+                    "SetType": set_type,
+                    "Category": category,
+                    "ExerciseName": exercise_name if exercise_name else None,
+                    "ExerciseLabel": exercise_label,
+                    "Reps": exercise.get('repetitionCount'),
+                    "Weight_g": weight_g,
+                    "Weight_kg": weight_kg,
+                    "Duration_s": duration_s,
+                }
+                points_list.append({
+                    "measurement": "StrengthExerciseSet",
+                    "time": set_time,
+                    "tags": {
+                        "Device": GARMIN_DEVICENAME,
+                        "Database_Name": INFLUXDB_DATABASE,
+                        "ActivityID": activity_id,
+                        "ActivitySelector": activity_selector,
+                        "ExerciseCategory": category,
+                        "ExerciseLabel": exercise_label,
+                    },
+                    "fields": data_fields
+                })
+            logging.info(f"Success : Fetching {set_counter} strength exercise sets for activity {activity_id}")
+        except Exception as err:
+            logging.warning(f"Failed to fetch exercise sets for activity {activity_id}: {err}")
+
+        # Fetch HR time in zones from Garmin API
+        try:
+            hr_zones_data = garmin_obj.get_activity_hr_in_timezones(activity_id)
+            for zone_info in hr_zones_data:
+                zone_number = zone_info.get('zoneNumber', zone_info.get('zone'))
+                if zone_number is None:
+                    continue
+                data_fields = {
+                    "Activity_ID": activity_id,
+                    "ActivityName": activity_name,
+                    "ZoneNumber": zone_number,
+                    "SecsInZone": zone_info.get('secsInZone'),
+                    "ZoneLowBoundary": zone_info.get('zoneLowBoundary'),
+                }
+                points_list.append({
+                    "measurement": "StrengthHRZones",
+                    "time": (activity_start_time + timedelta(milliseconds=zone_number)).isoformat(),
+                    "tags": {
+                        "Device": GARMIN_DEVICENAME,
+                        "Database_Name": INFLUXDB_DATABASE,
+                        "ActivityID": activity_id,
+                        "ActivitySelector": activity_selector,
+                        "ZoneNumber": str(zone_number),
+                    },
+                    "fields": data_fields
+                })
+            logging.info(f"Success : Fetching strength HR zones for activity {activity_id}")
+        except Exception as err:
+            logging.warning(f"Failed to fetch HR zones for activity {activity_id}: {err}")
+
+    return points_list
 
 # %%
 def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back to TCX
@@ -1334,9 +1497,11 @@ def daily_fetch_write(date_str):
     if 'hydration' in FETCH_SELECTION:
         write_points_to_influxdb(get_hydration(date_str))
     if 'activity' in FETCH_SELECTION:
-        activity_summary_points_list, activity_with_gps_id_dict = get_activity_summary(date_str)
+        activity_summary_points_list, activity_with_gps_id_dict, strength_activity_id_dict = get_activity_summary(date_str)
         write_points_to_influxdb(activity_summary_points_list)
         write_points_to_influxdb(fetch_activity_GPS(activity_with_gps_id_dict))
+        if strength_activity_id_dict:
+            write_points_to_influxdb(get_strength_training_data(strength_activity_id_dict))
     if 'solar_intensity' in FETCH_SELECTION:
         write_points_to_influxdb(get_solar_intensity(date_str))
     if 'lifestyle' in FETCH_SELECTION:
