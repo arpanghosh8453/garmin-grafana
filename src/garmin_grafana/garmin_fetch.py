@@ -684,7 +684,6 @@ def get_activity_summary(date_str):
                     'hrTimeInZone_3': int(val) if (val := activity.get('hrTimeInZone_3')) is not None else None,
                     'hrTimeInZone_4': int(val) if (val := activity.get('hrTimeInZone_4')) is not None else None,
                     'hrTimeInZone_5': int(val) if (val := activity.get('hrTimeInZone_5')) is not None else None,
-                    # Strength training specific fields (populated for strength_training activities)
                     'totalSets': activity.get('totalSets'),
                     'totalReps': activity.get('totalReps'),
                     'activeSets': activity.get('activeSets'),
@@ -730,7 +729,6 @@ def get_strength_training_data(strength_activity_id_dict):
         activity_selector = activity_start_time.strftime('%Y%m%dT%H%M%SUTC-') + activity_type
         activity_name = activity_info.get('activityName', activity_type)
 
-        # Write summarized exercise sets from activity list (workout-level summary per exercise group)
         summarized_sets = activity_info.get('summarizedExerciseSets', []) or []
         for idx, s in enumerate(summarized_sets):
             category = s.get('category', 'UNKNOWN')
@@ -742,14 +740,9 @@ def get_strength_training_data(strength_activity_id_dict):
                 "Activity_ID": activity_id,
                 "ActivityName": activity_name,
                 "ExerciseIndex": idx + 1,
-                "Category": category,
-                "SubCategory": sub_category if sub_category else None,
-                "ExerciseLabel": exercise_label,
                 "TotalReps": s.get('reps'),
                 "TotalSets": s.get('sets'),
-                "MaxWeight_g": max_weight,
                 "MaxWeight_kg": max_weight / 1000.0 if max_weight else 0.0,
-                "Volume_g": volume,
                 "Volume_kg": volume / 1000.0 if volume else 0.0,
                 "Duration_ms": s.get('duration'),
             }
@@ -767,30 +760,24 @@ def get_strength_training_data(strength_activity_id_dict):
                 "fields": data_fields
             })
 
-        # Fetch detailed exercise sets from Garmin API (individual set-level data)
         try:
             exercise_sets_data = garmin_obj.get_activity_exercise_sets(activity_id)
             exercises = exercise_sets_data.get('exerciseSets', []) or []
             set_counter = 0
             for exercise in exercises:
                 set_type = exercise.get('setType', '')
-                # Skip REST sets, only process ACTIVE sets
                 if set_type == 'REST':
                     continue
                 set_counter += 1
-                # Exercise category/name are nested inside an 'exercises' array
                 exercise_info = (exercise.get('exercises') or [{}])[0]
                 category = exercise_info.get('category', 'UNKNOWN')
                 exercise_name = exercise_info.get('name', '')
                 exercise_label = f"{category}/{exercise_name}" if exercise_name else category
-                # Weight from API is in grams (same as summarizedExerciseSets)
                 weight_g = float(exercise.get('weight', 0) or 0)
                 weight_kg = weight_g / 1000.0
-                # Duration from API is in seconds
                 duration_s = float(exercise.get('duration', 0) or 0)
                 start_ts = exercise.get('startTime')
                 if start_ts:
-                    # API returns ISO format string like '2026-03-17T15:32:33.0'
                     set_time = datetime.strptime(start_ts.split('.')[0], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=pytz.UTC).isoformat()
                 else:
                     set_time = (activity_start_time + timedelta(seconds=set_counter)).isoformat()
@@ -798,13 +785,9 @@ def get_strength_training_data(strength_activity_id_dict):
                 data_fields = {
                     "Activity_ID": activity_id,
                     "ActivityName": activity_name,
-                    "SetOrder": exercise.get('setOrder', set_counter),
+                    "SetOrder": int(exercise.get('setOrder', set_counter)),
                     "SetType": set_type,
-                    "Category": category,
-                    "ExerciseName": exercise_name if exercise_name else None,
-                    "ExerciseLabel": exercise_label,
-                    "Reps": exercise.get('repetitionCount'),
-                    "Weight_g": weight_g,
+                    "Reps": int(exercise.get('repetitionCount', 0)),
                     "Weight_kg": weight_kg,
                     "Duration_s": duration_s,
                 }
@@ -825,7 +808,6 @@ def get_strength_training_data(strength_activity_id_dict):
         except Exception as err:
             logging.warning(f"Failed to fetch exercise sets for activity {activity_id}: {err}")
 
-        # Fetch HR time in zones from Garmin API
         try:
             hr_zones_data = garmin_obj.get_activity_hr_in_timezones(activity_id)
             for zone_info in hr_zones_data:
@@ -835,7 +817,7 @@ def get_strength_training_data(strength_activity_id_dict):
                 data_fields = {
                     "Activity_ID": activity_id,
                     "ActivityName": activity_name,
-                    "ZoneNumber": zone_number,
+                    "ZoneNumber": int(zone_number),
                     "SecsInZone": zone_info.get('secsInZone'),
                     "ZoneLowBoundary": zone_info.get('zoneLowBoundary'),
                 }
@@ -847,7 +829,6 @@ def get_strength_training_data(strength_activity_id_dict):
                         "Database_Name": INFLUXDB_DATABASE,
                         "ActivityID": activity_id,
                         "ActivitySelector": activity_selector,
-                        "ZoneNumber": str(zone_number),
                     },
                     "fields": data_fields
                 })
