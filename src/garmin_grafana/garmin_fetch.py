@@ -647,10 +647,6 @@ def get_activity_summary(date_str):
                 'typeKey': activity_type_key,
                 'startTimeGMT': activity.get('startTimeGMT'),
                 'activityName': activity.get('activityName'),
-                'summarizedExerciseSets': activity.get('summarizedExerciseSets', []),
-                'totalSets': activity.get('totalSets'),
-                'totalReps': activity.get('totalReps'),
-                'activeSets': activity.get('activeSets'),
             }
         if "startTimeGMT" in activity: # "startTimeGMT" should be available for all activities (fix #13)
             points_list.append({
@@ -728,37 +724,6 @@ def get_strength_training_data(strength_activity_id_dict):
         activity_start_time = datetime.strptime(start_time_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC)
         activity_selector = activity_start_time.strftime('%Y%m%dT%H%M%SUTC-') + activity_type
         activity_name = activity_info.get('activityName', activity_type)
-
-        summarized_sets = activity_info.get('summarizedExerciseSets', []) or []
-        for idx, s in enumerate(summarized_sets):
-            category = s.get('category', 'UNKNOWN')
-            sub_category = s.get('subCategory', '')
-            exercise_label = f"{category}/{sub_category}" if sub_category else category
-            max_weight = s.get('maxWeight', 0)
-            volume = s.get('volume', 0)
-            data_fields = {
-                "Activity_ID": activity_id,
-                "ActivityName": activity_name,
-                "ExerciseIndex": idx + 1,
-                "TotalReps": s.get('reps'),
-                "TotalSets": s.get('sets'),
-                "MaxWeight_kg": max_weight / 1000.0 if max_weight else 0.0,
-                "Volume_kg": volume / 1000.0 if volume else 0.0,
-                "Duration_ms": s.get('duration'),
-            }
-            points_list.append({
-                "measurement": "StrengthExerciseSummary",
-                "time": (activity_start_time + timedelta(milliseconds=idx)).isoformat(),
-                "tags": {
-                    "Device": GARMIN_DEVICENAME,
-                    "Database_Name": INFLUXDB_DATABASE,
-                    "ActivityID": activity_id,
-                    "ActivitySelector": activity_selector,
-                    "ExerciseCategory": category,
-                    "ExerciseLabel": exercise_label,
-                },
-                "fields": data_fields
-            })
 
         try:
             exercise_sets_data = garmin_obj.get_activity_exercise_sets(activity_id)
