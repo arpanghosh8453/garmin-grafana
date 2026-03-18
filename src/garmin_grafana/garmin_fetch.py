@@ -785,7 +785,7 @@ def get_strength_training_data(strength_activity_id_dict):
                 }
                 points_list.append({
                     "measurement": "StrengthHRZones",
-                    "time": (activity_start_time + timedelta(milliseconds=zone_number)).isoformat(),
+                    "time": (activity_start_time + timedelta(milliseconds=int(zone_number))).isoformat(),
                     "tags": {
                         "Device": GARMIN_DEVICENAME,
                         "Database_Name": INFLUXDB_DATABASE,
