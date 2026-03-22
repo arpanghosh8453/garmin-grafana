@@ -16,6 +16,7 @@ on:
       - 'Dockerfile'
       - '.python-version'
       - 'uv.lock'
+      - '.github/workflows/prod.push.yml'
 
 env:
   IMAGE_NAME: garmin-fetch-data
