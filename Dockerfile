@@ -9,7 +9,7 @@ WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
 RUN apt-get update \
- && apt-get install -y --no-install-recommends build-essential \
+ && apt-get install -y --no-install-recommends build-essential git \
  && rm -rf /var/lib/apt/lists/*
 RUN uv sync --locked
 
