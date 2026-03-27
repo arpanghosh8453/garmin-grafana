@@ -4,8 +4,6 @@ on:
     branches:
       - '**'
   workflow_dispatch:
-  schedule:
-    - cron: "0 */6 * * *"
 
 jobs:
   call-codeberg-sync:
