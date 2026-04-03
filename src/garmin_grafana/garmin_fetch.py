@@ -94,7 +94,7 @@ try:
             influxdbclient = InfluxDBClient3(
             host=f"http://{INFLUXDB_HOST}:{INFLUXDB_PORT}",
             token=INFLUXDB_V3_ACCESS_TOKEN,
-            org=INFLUXDB_ORG
+            org=INFLUXDB_ORG,
             database=INFLUXDB_DATABASE
             )
     else:
