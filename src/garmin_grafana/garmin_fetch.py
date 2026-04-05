@@ -656,8 +656,11 @@ def get_activity_summary(date_str):
             activity_id = activity.get('activityId')
             hr_zones_data = garmin_obj.get_activity_hr_in_timezones(activity_id)
             hr_zone_boundaries = [None] * 5
-            for zone in hr_zones_data:
-                hr_zone_boundaries[int(zone.get('zoneNumber')) - 1] = zone.get('zoneLowBoundary')
+            if hr_zones_data:
+                for zone in hr_zones_data:
+                    hr_zone_boundaries[int(zone.get('zoneNumber')) - 1] = zone.get('zoneLowBoundary')
+            else:
+                logging.warning(f"No HR zone data found for activity: {activity_id}")
 
             points_list.append({
                 "measurement":  "ActivitySummary",
