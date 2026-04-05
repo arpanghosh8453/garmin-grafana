@@ -41,6 +41,7 @@ INFLUXDB_USERNAME = os.getenv("INFLUXDB_USERNAME", 'influxdb_username') # Requir
 INFLUXDB_PASSWORD = os.getenv("INFLUXDB_PASSWORD", 'influxdb_access_password') # Required
 INFLUXDB_DATABASE = os.getenv("INFLUXDB_DATABASE", 'GarminStats') # Required
 INFLUXDB_V3_ACCESS_TOKEN = os.getenv("INFLUXDB_V3_ACCESS_TOKEN",'') # InfluxDB V3 Access token, required only for InfluxDB V3
+INFLUXDB_ORG = os.getenv("INFLUXDB_ORG", 'default') # required only for InfluxDB V3 
 TOKEN_DIR = os.getenv("TOKEN_DIR", "~/.garminconnect") # optional
 GARMINCONNECT_EMAIL = os.environ.get("GARMINCONNECT_EMAIL", None) # optional, asks in prompt on run if not provided
 GARMINCONNECT_PASSWORD = base64.b64decode(os.getenv("GARMINCONNECT_BASE64_PASSWORD")).decode("utf-8") if os.getenv("GARMINCONNECT_BASE64_PASSWORD") != None else None # optional, asks in prompt on run if not provided
@@ -93,6 +94,7 @@ try:
             influxdbclient = InfluxDBClient3(
             host=f"http://{INFLUXDB_HOST}:{INFLUXDB_PORT}",
             token=INFLUXDB_V3_ACCESS_TOKEN,
+            org=INFLUXDB_ORG,
             database=INFLUXDB_DATABASE
             )
     else:
@@ -103,6 +105,7 @@ try:
             influxdbclient = InfluxDBClient3(
             host=f"https://{INFLUXDB_HOST}:{INFLUXDB_PORT}",
             token=INFLUXDB_V3_ACCESS_TOKEN,
+            org=INFLUXDB_ORG,
             database=INFLUXDB_DATABASE
             )
     demo_point = {
@@ -903,7 +906,7 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "ActivityName": activity_type,
                                     "Activity_ID": activityID,
                                     "Sport": str(session_record.get('sport', None)), # Avoid partial write error 400 see #152#issuecomment-3084539416
-                                    "Sub_Sport": session_record.get('sub_sport', None),
+                                    "Sub_Sport": str(session_record.get('sub_sport', None)),
                                     "Pool_Length": session_record.get('pool_length', None),
                                     "Pool_Length_Unit": session_record.get('pool_length_unit', None),
                                     "Lengths": session_record.get('num_laps', None),
