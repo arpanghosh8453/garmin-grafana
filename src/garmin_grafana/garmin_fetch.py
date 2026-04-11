@@ -171,6 +171,13 @@ def garmin_login():
                 mfa_code = input("MFA one-time code (via email or SMS): ")
                 garmin.resume_login(result2, mfa_code)
 
+            # With return_on_mfa=True, library login can return before its internal token auto-dump path.
+            # Persist tokens explicitly so next run can restore from TOKEN_DIR.
+            if hasattr(garmin, "client") and hasattr(garmin.client, "dump"):
+                garmin.client.dump(token_store)
+            else:
+                raise GarminConnectConnectionError("Unable to persist Garmin session tokens: no supported dump method found")
+
             logging.info(f"Oauth tokens stored in '{token_store}' for future use")
             logging.info("login to Garmin Connect successful using credentials and MFA (if enabled). Continuing with current run")
 
