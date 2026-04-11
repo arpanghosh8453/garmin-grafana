@@ -1,3 +1,9 @@
 garminconnect-tokens/
 override-default-vars.env
 kubernetes-spec.yaml
+src/garmin_grafana.egg-info/dependency_links.txt
+src/garmin_grafana.egg-info/entry_points.txt
+src/garmin_grafana.egg-info/PKG-INFO
+src/garmin_grafana.egg-info/requires.txt
+src/garmin_grafana.egg-info/SOURCES.txt
+src/garmin_grafana.egg-info/top_level.txt
