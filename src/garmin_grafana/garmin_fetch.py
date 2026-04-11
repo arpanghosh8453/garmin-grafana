@@ -149,10 +149,14 @@ def garmin_login():
         )
 
     try:
-        logging.info(f"Trying to login to Garmin Connect using token data from directory '{token_store}'...")
+        logging.info(f"Trying to login to Garmin Connect using token data from '{token_store}'...")
         garmin = Garmin()
-        garmin.login(token_store)
-        logging.info("login to Garmin Connect successful using stored session tokens.")
+        result1, result2 = garmin.login(token_store)
+        if result1 == "needs_mfa":
+            raise GarminConnectAuthenticationError(
+                "MFA is required but credentials are not configured for interactive login"
+            )
+        logging.info("Login to Garmin Connect successful using stored session tokens.")
 
     except (FileNotFoundError, GarminConnectAuthenticationError, GarminConnectConnectionError):
         logging.warning("Session is expired or login information not present/incorrect. You'll need to log in again...login with your Garmin Connect credentials to generate them.")
@@ -162,20 +166,12 @@ def garmin_login():
             garmin = Garmin(
                 email=user_email, password=user_password, is_cn=GARMINCONNECT_IS_CN, return_on_mfa=True
             )
-            result1, result2 = garmin.login()
+            result1, result2 = garmin.login(token_store)
             if result1 == "needs_mfa":  # MFA is required
                 mfa_code = input("MFA one-time code (via email or SMS): ")
                 garmin.resume_login(result2, mfa_code)
 
-            if hasattr(garmin, "client") and hasattr(garmin.client, "dump"):
-                garmin.client.dump(token_store)
-            elif hasattr(garmin, "garth") and hasattr(garmin.garth, "dump"):
-                # Backward compatibility with older garminconnect module internals.
-                garmin.garth.dump(token_store)
-            else:
-                raise GarminConnectConnectionError("Unable to persist Garmin session tokens: no supported dump method found")
-            logging.info(f"Oauth tokens stored in '{token_store}' directory for future use")
-
+            logging.info(f"Oauth tokens stored in '{token_store}' for future use")
             logging.info("login to Garmin Connect successful using credentials and MFA (if enabled). Continuing with current run")
 
         except (
