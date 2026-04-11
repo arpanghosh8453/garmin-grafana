@@ -682,6 +682,15 @@ def get_activity_summary(date_str):
                 'activityName': activity.get('activityName'),
             }
         if "startTimeGMT" in activity: # "startTimeGMT" should be available for all activities (fix #13)
+            activity_id = activity.get('activityId')
+            hr_zones_data = garmin_obj.get_activity_hr_in_timezones(activity_id)
+            hr_zone_boundaries = [None] * 5
+            if hr_zones_data:
+                for zone in hr_zones_data:
+                    hr_zone_boundaries[int(zone.get('zoneNumber')) - 1] = zone.get('zoneLowBoundary')
+            else:
+                logging.warning(f"No HR zone data found for activity: {activity_id}")
+
             points_list.append({
                 "measurement":  "ActivitySummary",
                 "time": datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC).isoformat(),
@@ -692,7 +701,7 @@ def get_activity_summary(date_str):
                     "ActivitySelector": datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC).strftime('%Y%m%dT%H%M%SUTC-') + (activity.get('activityType') or {}).get('typeKey', "Unknown")
                 },
                 "fields": {
-                    "Activity_ID": activity.get('activityId'),
+                    "Activity_ID": activity_id,
                     'Device_ID': activity.get('deviceId'),
                     'activityName': activity.get('activityName'),
                     'description': activity.get('description'),
@@ -716,6 +725,11 @@ def get_activity_summary(date_str):
                     'hrTimeInZone_3': int(val) if (val := activity.get('hrTimeInZone_3')) is not None else None,
                     'hrTimeInZone_4': int(val) if (val := activity.get('hrTimeInZone_4')) is not None else None,
                     'hrTimeInZone_5': int(val) if (val := activity.get('hrTimeInZone_5')) is not None else None,
+                    'hrZoneLowBoundary_1': hr_zone_boundaries[0],
+                    'hrZoneLowBoundary_2': hr_zone_boundaries[1],
+                    'hrZoneLowBoundary_3': hr_zone_boundaries[2],
+                    'hrZoneLowBoundary_4': hr_zone_boundaries[3],
+                    'hrZoneLowBoundary_5': hr_zone_boundaries[4],
                     'aerobicTrainingEffect': activity.get('aerobicTrainingEffect'),
                     'anaerobicTrainingEffect': activity.get('anaerobicTrainingEffect'),
                     'activityTrainingLoad': activity.get('activityTrainingLoad'),
