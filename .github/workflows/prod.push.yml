@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - auth-fix
     paths:
       - 'src/garmin_grafana/garmin_fetch.py'
       - 'src/garmin_grafana/influxdb_exporter.py'
@@ -15,6 +16,7 @@ on:
       - 'Dockerfile'
       - '.python-version'
       - 'uv.lock'
+      - '.github/workflows/prod.push.yml'
 
 env:
   IMAGE_NAME: garmin-fetch-data
@@ -51,6 +53,15 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+
+      - name: Resolve Image Tag From Branch
+        run: |
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+            echo "IMAGE_TAG=latest" >> "$GITHUB_ENV"
+          else
+            SAFE_TAG="${GITHUB_REF_NAME//\//-}"
+            echo "IMAGE_TAG=${SAFE_TAG}" >> "$GITHUB_ENV"
+          fi
 
       - name: Build Multi-Arch Image (linux/amd64, linux/arm64) and Push
         uses: docker/build-push-action@v5
