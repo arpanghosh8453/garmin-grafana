@@ -1,0 +1,33 @@
+variables:
+  - &dockerfile Dockerfile
+  - &repo codeberg.org/${CI_REPO_OWNER}/${CI_REPO_NAME}
+
+steps:
+  publish-latest:
+    image: codeberg.org/woodpecker-plugins/docker-buildx:6.0.3
+    when:
+      - event: push
+        branch: ${CI_REPO_DEFAULT_BRANCH}
+    settings:
+      dockerfile: *dockerfile
+      platforms: linux/amd64
+      repo: *repo
+      registry: codeberg.org
+      tags: latest
+      username: ${CI_REPO_OWNER}
+      password:
+        from_secret: codeberg_token
+
+  publish-tag:
+    image: codeberg.org/woodpecker-plugins/docker-buildx:6.0.3
+    when:
+      - event: tag
+    settings:
+      dockerfile: *dockerfile
+      platforms: linux/amd64
+      repo: *repo
+      registry: codeberg.org
+      auto_tag: true
+      username: ${CI_REPO_OWNER}
+      password:
+        from_secret: codeberg_token
