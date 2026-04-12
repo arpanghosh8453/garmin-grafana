@@ -7,10 +7,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY pyproject.toml uv.lock ./
-RUN apt-get update \
- && apt-get install -y --no-install-recommends build-essential \
- && rm -rf /var/lib/apt/lists/*
+COPY pyproject.toml uv.lock README.md ./
+COPY src ./src
+# Pure-Python wheels are available for all pinned deps on Python 3.13, so
+# build-essential is no longer required -> smaller/faster build.
 RUN uv sync --locked
 
 FROM python:3.13-slim-bookworm AS runtime
@@ -24,8 +24,12 @@ WORKDIR /app
 RUN groupadd --gid 1000 appuser && useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser
 
 COPY --chown=appuser:appuser --from=build /app/.venv /app/.venv
-COPY --chown=appuser:appuser src /app/
+COPY --chown=appuser:appuser src /app/src
+
+ENV PYTHONPATH=/app/src
 
 USER appuser
 
-CMD ["python", "garmin_grafana/garmin_fetch.py"]
+# Run as a module so ``if __name__ == "__main__": main()`` is executed and the
+# package layout stays clean (matches ``uv run garmin-fetch`` behaviour).
+CMD ["python", "-m", "garmin_grafana.garmin_fetch"]

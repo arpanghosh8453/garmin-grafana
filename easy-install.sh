@@ -30,11 +30,28 @@ fi
 echo "Creating garminconnect-tokens directory..."
 mkdir -p garminconnect-tokens
 
-echo "Setting folder permission to 777 for generel accessibility"
-chmod -R 777 garminconnect-tokens || { echo "Permission change failed - you may need to run this as sudo?. Exiting."; exit 1; }
+# Garmin session tokens are sensitive credentials. We make the directory
+# owned by the container's appuser (uid/gid 1000) instead of the old
+# ``chmod -R 777`` approach which made the tokens world-readable/writable.
+echo "Setting garminconnect-tokens ownership to uid/gid 1000 (container appuser)..."
+if ! sudo chown -R 1000:1000 garminconnect-tokens; then
+    echo "chown failed - falling back to chmod 700 for the current user. If the"
+    echo "container reports permission errors, re-run with sudo or uncomment the"
+    echo "'user: root' line in compose.yml."
+    chmod -R 700 garminconnect-tokens || true
+fi
 
-echo "Renaming compose-example.yml to compose.yml..."
-mv compose-example.yml compose.yml
+if [ -f compose.yml ]; then
+    echo "compose.yml already exists - leaving it untouched."
+else
+    echo "Creating compose.yml from compose-example.yml..."
+    cp compose-example.yml compose.yml
+fi
+
+if [ ! -f .env ]; then
+    echo "Creating .env from .env.example - EDIT IT AND CHANGE THE PASSWORDS before going to production!"
+    cp .env.example .env
+fi
 
 echo "Replacing {DS_GARMIN_STATS} variable with garmin_influxdb in the dashboard JSON..."
 if [[ "$OSTYPE" == "darwin"* ]]; then

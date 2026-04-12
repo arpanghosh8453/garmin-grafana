@@ -1,15 +1,18 @@
 apiVersion: 1
+# Grafana substitutes $VAR / ${VAR} from the container's environment at
+# provisioning time. The compose file exposes INFLUXDB_USER / INFLUXDB_PASSWORD /
+# INFLUXDB_DATABASE to the grafana service, sourced from the repo-level .env.
 datasources:
   - name: Garmin-InfluxDB
     uid: garmin_influxdb
     type: influxdb
     access: proxy
     url: http://influxdb:8086
-    user: influxdb_user
-    database: GarminStats
+    user: $INFLUXDB_USER
+    database: $INFLUXDB_DATABASE
     isDefault: true
     editable: true
     secureJsonData:
-      password: influxdb_secret_password
+      password: $INFLUXDB_PASSWORD
     jsonData:
       httpMode: GET

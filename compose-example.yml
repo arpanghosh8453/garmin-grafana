@@ -1,21 +1,27 @@
-# There is support for influxdb v3 (core) OSS, but it's highly recommended to use Influxdb 1.x versions with this project. 
+# There is support for influxdb v3 (core) OSS, but it's highly recommended to use Influxdb 1.x versions with this project.
+#
+# Credentials are read from a sibling ``.env`` file (see ``.env.example``).
+# The ``${VAR:-default}`` syntax keeps backwards compatibility: if you do not
+# create a .env file, the historical default values are used. You are STRONGLY
+# encouraged to create a real .env with your own secrets.
 
 services:
   garmin-fetch-data:
     restart: unless-stopped
     image: thisisarpanghosh/garmin-fetch-data:latest
     container_name: garmin-fetch-data
-    # user: root # Runs the container as root user, uncomment this line if you are getting permission issues which can't be resolved otherwise. For this, you also need to change the below volume mount from './garminconnect-tokens:/home/appuser/.garminconnect' to './garminconnect-tokens:/root/.garminconnect' to ensure the token files persist during container rebuilding. 
+    # user: root # Runs the container as root user, uncomment this line if you are getting permission issues which can't be resolved otherwise. For this, you also need to change the below volume mount from './garminconnect-tokens:/home/appuser/.garminconnect' to './garminconnect-tokens:/root/.garminconnect' to ensure the token files persist during container rebuilding.
     depends_on:
-      - influxdb
+      influxdb:
+        condition: service_healthy
     volumes:
       - ./garminconnect-tokens:/home/appuser/.garminconnect # (persistent tokens storage - garminconnect-tokens folder must be owned by 1000:1000) - should be './garminconnect-tokens:/root/.garminconnect' instead if you are using using user: root
     environment:
       - INFLUXDB_HOST=influxdb
       - INFLUXDB_PORT=8086 # Influxdb V3 maps to 8181 instead of 8086 of V1
-      - INFLUXDB_USERNAME=influxdb_user # user should have read/write access to INFLUXDB_DATABASE (Required for influxdb 1.x, ignore for influxdb 3.x - set the 3.x specific variables)
-      - INFLUXDB_PASSWORD=influxdb_secret_password # (Required for influxdb 1.x, ignore for influxdb 3.x - set the 3.x specific variables)
-      - INFLUXDB_DATABASE=GarminStats
+      - INFLUXDB_USERNAME=${INFLUXDB_USER:-influxdb_user} # user should have read/write access to INFLUXDB_DATABASE (Required for influxdb 1.x, ignore for influxdb 3.x - set the 3.x specific variables)
+      - INFLUXDB_PASSWORD=${INFLUXDB_PASSWORD:-influxdb_secret_password} # (Required for influxdb 1.x, ignore for influxdb 3.x - set the 3.x specific variables)
+      - INFLUXDB_DATABASE=${INFLUXDB_DATABASE:-GarminStats}
       - GARMINCONNECT_IS_CN=False # Set this to True if you are in mainland China or use Garmin-cn (Default False)
       #####################################################################################
       # - GARMINCONNECT_EMAIL=your_garminconnect_email # optional, read the setup docs. (remove or comment out this line altogether if not used)
@@ -42,10 +48,16 @@ services:
     restart: unless-stopped
     container_name: influxdb
     hostname: influxdb
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8086/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     environment:
-      - INFLUXDB_DB=GarminStats
-      - INFLUXDB_USER=influxdb_user
-      - INFLUXDB_USER_PASSWORD=influxdb_secret_password
+      - INFLUXDB_DB=${INFLUXDB_DATABASE:-GarminStats}
+      - INFLUXDB_USER=${INFLUXDB_USER:-influxdb_user}
+      - INFLUXDB_USER_PASSWORD=${INFLUXDB_PASSWORD:-influxdb_secret_password}
       - INFLUXDB_DATA_INDEX_VERSION=tsi1
       #############################################################
       # The following ENV variables are applicable for InfluxDB V3
@@ -67,8 +79,12 @@ services:
     container_name: grafana
     hostname: grafana
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      # Exposed to Grafana provisioning YAML via ${INFLUXDB_USER}/${INFLUXDB_PASSWORD}
+      - INFLUXDB_USER=${INFLUXDB_USER:-influxdb_user}
+      - INFLUXDB_PASSWORD=${INFLUXDB_PASSWORD:-influxdb_secret_password}
+      - INFLUXDB_DATABASE=${INFLUXDB_DATABASE:-GarminStats}
       - GF_PLUGINS_PREINSTALL=marcusolsson-hourly-heatmap-panel
       - GF_DATE_FORMATS_FULL_DATE=MMM Do, YYYY - hh:mm:ss a
       - GF_DATE_FORMATS_INTERVAL_SECOND=hh:mm:ss a
