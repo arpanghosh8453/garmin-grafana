@@ -31,6 +31,7 @@ A docker container to fetch data from Garmin servers and store the data in a loc
   - How to use [multiple accounts](#multi-user-instance-setup)? - if you want to set up a dashboard for your spouse
   - [Troubleshooting](#troubleshooting) Guide
   - [Need Help?](#need-help)
+  - [Want a Desktop App?](#want-a-desktop-app)
 - Project supplement
   - [Credits](#credits)
   - [Dependencies](#dependencies)
@@ -344,6 +345,14 @@ If you find this project helpful, please consider:
 ## Need Help?
 
 If you're experiencing any issues with running this project or have questions, feel free to [open an issue](https://github.com/arpanghosh8453/garmin-grafana/issues/new/choose) on this repository. I'll do my best to assist you.
+
+## What a Desktop App?
+
+Too complicated to self host just to see your activity data? What a completely offline Desktop solution, which can be installed from standard binaries? Here is a cross platform solution, check out [fit-dashboard](https://github.com/arpanghosh8453/fit-dashboard)
+
+<img width="1897" height="1018" alt="individual_page" src="https://github.com/user-attachments/assets/d64eb39a-5e84-46e5-aa42-44aa6e4e9274" />
+<img width="1905" height="1019" alt="overview_page" src="https://github.com/user-attachments/assets/b9aa8762-66c1-453a-9bf6-f974e9600280" />
+
 
 ## Star History
 
