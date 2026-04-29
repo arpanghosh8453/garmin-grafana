@@ -59,7 +59,7 @@ MAX_CONSECUTIVE_500_ERRORS = int(os.getenv("MAX_CONSECUTIVE_500_ERRORS", 10)) # 
 INFLUXDB_ENDPOINT_IS_HTTP = False if os.getenv("INFLUXDB_ENDPOINT_IS_HTTP") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional
 GARMIN_DEVICENAME_AUTOMATIC = False if GARMIN_DEVICENAME != "Unknown" else True # optional
 UPDATE_INTERVAL_SECONDS = int(os.getenv("UPDATE_INTERVAL_SECONDS", 300)) # optional
-FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,fitness_age,vo2,activity,race_prediction,body_composition,lifestyle") # additional available values are lactate_threshold,training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration,solar_intensity which you can add to the list seperated by , without any space
+FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,fitness_age,vo2,activity,race_prediction,body_composition,lifestyle") # additional available values are lactate_threshold,training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration,solar_intensity,cycling_dynamics which you can add to the list seperated by , without any space
 ACTIVITY_TYPE_FILTER = [t.strip().lower() for t in os.getenv("ACTIVITY_TYPE_FILTER", "").split(",") if t.strip()] # optional, comma-separated list of activity typeKeys to import only specific activity types. Leave empty to import all. Known typeKeys: running,treadmill_running,indoor_running,cycling,indoor_cycling,road_biking,mountain_biking,walking,hiking,mountaineering,strength_training,hiit,indoor_cardio,elliptical,lap_swimming,open_water_swimming,rock_climbing,indoor_climbing,tennis_v2,kayaking_v2,boating_v2,multi_sport,other
 LACTATE_THRESHOLD_SPORTS = os.getenv("LACTATE_THRESHOLD_SPORTS", "RUNNING").upper().split(",") # Garmin currently implements RUNNING, but has provisions for CYCLING, and SWIMMING
 KEEP_FIT_FILES = True if os.getenv("KEEP_FIT_FILES") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional
@@ -843,31 +843,6 @@ def get_strength_training_data(strength_activity_id_dict):
 
 # %%
 def _build_cycling_dynamics_point(all_records_list, all_sessions_list, activityID, activity_type, activity_start_time):
-    """
-    Build a single CyclingDynamics InfluxDB point from FIT session and record messages.
-    Returns None if no relevant cycling dynamics data is present (e.g. no power meter).
-
-    Session-level pre-computed averages (primary source — Garmin devices store these
-    as summary fields in the session message):
-
-      ANT+ standard (any dual-sided power meter):
-        avg_left_torque_effectiveness, avg_right_torque_effectiveness,
-        avg_left_pedal_smoothness, avg_right_pedal_smoothness
-
-      Garmin Vector/Rally exclusive (power phase angles in degrees, PCO in mm):
-        avg_left_power_phase_start, avg_left_power_phase_end,
-        avg_right_power_phase_start, avg_right_power_phase_end,
-        avg_left_power_phase_peak_start, avg_left_power_phase_peak_end,
-        avg_right_power_phase_peak_start, avg_right_power_phase_peak_end,
-        avg_left_pco, avg_right_pco
-
-      Session-level power summary:
-        normalized_power, training_stress_score, intensity_factor,
-        left_right_balance (% left power, decoded from FIT uint16 bitmask)
-
-    Per-record averaging is used as a fallback for devices that store cycling
-    dynamics in record messages rather than session-level averages.
-    """
     def avg_nonzero(records, key):
         vals = [r[key] for r in records if r.get(key) not in (None, 0)]
         return sum(vals) / len(vals) if vals else None
@@ -1164,13 +1139,14 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                             }
                             points_list.append(point)
                     # Extract cycling dynamics and advanced power metrics
-                    cycling_point = _build_cycling_dynamics_point(
-                        all_records_list, all_sessions_list,
-                        activityID, activity_type, activity_start_time
-                    )
-                    if cycling_point:
-                        points_list.append(cycling_point)
-                        logging.info(f"Activity ID {activityID}: CyclingDynamics point added ({len(cycling_point['fields']) - 2} metrics)")
+                    if 'cycling_dynamics' in FETCH_SELECTION:
+                        cycling_point = _build_cycling_dynamics_point(
+                            all_records_list, all_sessions_list,
+                            activityID, activity_type, activity_start_time
+                        )
+                        if cycling_point:
+                            points_list.append(cycling_point)
+                            logging.info(f"Activity ID {activityID}: CyclingDynamics point added ({len(cycling_point['fields']) - 2} metrics)")
 
                     if KEEP_FIT_FILES:
                         os.makedirs(FIT_FILE_STORAGE_LOCATION, exist_ok=True)
