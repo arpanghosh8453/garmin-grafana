@@ -1196,8 +1196,7 @@
         "legend": {
           "calcs": [
             "min",
-            "max",
-            "mean"
+            "max"
           ],
           "displayMode": "table",
           "placement": "bottom",
