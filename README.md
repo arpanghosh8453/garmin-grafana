@@ -125,6 +125,14 @@ Enter the Garmin Connect credentials when prompted and you should be all up and 
 
 That should be everything you need for now! The script will be running in the background as long as your machine is up. After a restart, make sure to open docker desktop if you are on windows (if it does not start automatically) so that the containers get booted up as well. For Linux, everything should restart reliably after a reboot. If you are having issues, make sure the docker daemon is running and check the container status with `docker ps` command
 
+#### Proxmox LXC Install (via community-scripts)
+
+If you are running Proxmox, you can deploy this project as an LXC container using the [community-scripts/ProxmoxVED](https://github.com/community-scripts/ProxmoxVED) helper. Run the following command from your Proxmox host shell:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVED/main/ct/garmin-grafana.sh)"
+```
+
 ## Manual Install with Docker (Recommended if you understand linux concepts)
 
 > [!IMPORTANT]
