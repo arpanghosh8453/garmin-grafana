@@ -44,8 +44,13 @@ INFLUXDB_V3_ACCESS_TOKEN = os.getenv("INFLUXDB_V3_ACCESS_TOKEN",'') # InfluxDB V
 INFLUXDB_ORG = os.getenv("INFLUXDB_ORG", 'default') # required only for InfluxDB V3 
 TOKEN_DIR = os.getenv("TOKEN_DIR", "~/.garminconnect") # optional
 GARMINCONNECT_EMAIL = (os.environ.get("GARMINCONNECT_EMAIL") or "").strip() or None # optional, asks in prompt on run if not provided
-_garmin_pw_b64 = os.getenv("GARMINCONNECT_BASE64_PASSWORD")
-GARMINCONNECT_PASSWORD = base64.b64decode(_garmin_pw_b64).decode("utf-8").strip() if _garmin_pw_b64 else None # optional, asks in prompt on run if not provided
+_garmin_pw_b64 = (os.getenv("GARMINCONNECT_BASE64_PASSWORD") or "").strip() or None
+if os.getenv("GARMINCONNECT_PASSWORD") and not _garmin_pw_b64:
+    logging.warning("GARMINCONNECT_PASSWORD ENV variable is not supported and will be ignored - please provide your password Base64 encoded via GARMINCONNECT_BASE64_PASSWORD instead (see README)")
+try:
+    GARMINCONNECT_PASSWORD = base64.b64decode(_garmin_pw_b64, validate=True).decode("utf-8").strip() if _garmin_pw_b64 else None # optional, asks in prompt on run if not provided
+except (ValueError, UnicodeDecodeError) as err: # binascii.Error is a subclass of ValueError
+    raise ValueError("GARMINCONNECT_BASE64_PASSWORD does not contain valid Base64 encoded data - encode your password first (e.g. printf '%s' 'your_password' | base64) and use that value. A plaintext password here silently decodes to garbage and leads to misleading 401 login errors") from err
 GARMINCONNECT_IS_CN = True if os.getenv("GARMINCONNECT_IS_CN") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional if you are using a Chinese account
 GARMIN_DEVICENAME = os.getenv("GARMIN_DEVICENAME", "Unknown")  # optional, attempts to set the name automatically if not given
 GARMIN_DEVICEID = os.getenv("GARMIN_DEVICEID", None)  # optional, attempts to set the id automatically if not given
@@ -136,6 +141,26 @@ def iter_days(start_date: str, end_date: str):
 
 
 # %%
+class GarminLoginInputUnavailableError(Exception):
+    """Raised when Garmin login requires interactive input but no terminal is attached."""
+
+
+def _prompt(prompt_text):
+    """Read a value interactively, translating a missing/closed stdin (e.g. container
+    started detached with `docker compose up -d`) into a clear, actionable error
+    instead of an unhandled EOFError crash-loop (see issue #233)."""
+    try:
+        return input(prompt_text).strip()
+    except EOFError as err:
+        raise GarminLoginInputUnavailableError(
+            "Garmin login needs interactive input for this step, but no terminal is attached to the container "
+            "(this happens when it is started detached, e.g. with `docker compose up -d`). "
+            "Run the first-time login interactively with `docker compose run --rm garmin-fetch-data` to generate the auth tokens, "
+            "or provide the GARMINCONNECT_EMAIL and GARMINCONNECT_BASE64_PASSWORD ENV variables (password must be Base64 encoded - see README). "
+            "Note : accounts with MFA/2FA enabled always need one interactive run to enter the one-time code."
+        ) from err
+
+
 def garmin_login():
     token_store_expanded = os.path.expanduser(TOKEN_DIR)
     token_store = token_store_expanded
@@ -158,22 +183,34 @@ def garmin_login():
     except (FileNotFoundError, GarminConnectAuthenticationError, GarminConnectConnectionError):
         logging.warning("Session is expired or login information not present/incorrect. You'll need to log in again...login with your Garmin Connect credentials to generate them.")
         try:
-            user_email = (GARMINCONNECT_EMAIL or "").strip() or input("Enter Garminconnect Login e-mail: ").strip()
-            user_password = (GARMINCONNECT_PASSWORD or "").strip() or input("Enter Garminconnect password (characters will be visible): ").strip()
+            if GARMINCONNECT_EMAIL and GARMINCONNECT_PASSWORD:
+                logging.info("Using Garmin Connect credentials provided with the GARMINCONNECT_EMAIL and GARMINCONNECT_BASE64_PASSWORD ENV variables")
+            user_email = GARMINCONNECT_EMAIL or _prompt("Enter Garminconnect Login e-mail: ")
+            user_password = GARMINCONNECT_PASSWORD or _prompt("Enter Garminconnect password (characters will be visible): ")
             garmin = Garmin(
                 email=user_email, password=user_password, is_cn=GARMINCONNECT_IS_CN,
-                prompt_mfa=lambda: input("MFA one-time code (via email or SMS): ").strip(),
+                prompt_mfa=lambda: _prompt("MFA one-time code (via email or SMS): "),
             )
             garmin.login(token_store)
 
             logging.info(f"Oauth tokens stored in '{token_store}' for future use")
             logging.info("login to Garmin Connect successful using credentials and MFA (if enabled). Continuing with current run")
 
+        except GarminLoginInputUnavailableError as err:
+            logging.error(str(err))
+            raise Exception("Garmin login failed : interactive input required but no terminal is attached (see the error above for how to fix this)") from None
+        except GarminConnectTooManyRequestsError as err:
+            logging.error(str(err))
+            raise Exception(
+                "Garmin login failed : rate limited by Garmin (429). Too many login attempts from this IP - "
+                "a crash-looping container with restart: unless-stopped makes this worse by retrying the login on every restart. "
+                "Stop the container, wait a few hours, and retry interactively with `docker compose run --rm garmin-fetch-data`. "
+                "Valid stored tokens are unaffected by this - do not delete the token directory."
+            ) from None
         except (
             FileNotFoundError,
             GarminConnectConnectionError,
             GarminConnectAuthenticationError,
-            GarminConnectTooManyRequestsError,
             requests.exceptions.HTTPError,
         ) as err:
             logging.error(str(err))
