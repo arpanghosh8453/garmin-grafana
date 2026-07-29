@@ -115,7 +115,7 @@ dependencies = [
 requires-dist = [
     { name = "dotenv", specifier = "==0.9.9" },
     { name = "fitparse", specifier = "==1.2.0" },
-    { name = "garminconnect", specifier = "==0.3.3" },
+    { name = "garminconnect", specifier = "==0.3.7" },
     { name = "influxdb", specifier = "==5.3.2" },
     { name = "influxdb3-python", specifier = "==0.12.0" },
     { name = "pandas", specifier = "==2.2.3" },
@@ -123,16 +123,16 @@ requires-dist = [
 
 [[package]]
 name = "garminconnect"
-version = "0.3.3"
+version = "0.3.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "curl-cffi" },
     { name = "requests" },
     { name = "ua-generator" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/dd/d9/7ad240d86453de083f0c460ee328e8209232d9d0ee099dcf49439d90be7a/garminconnect-0.3.3.tar.gz", hash = "sha256:f608193d7a90079fa1fd1d86e8d10e88b871b6ab2500372a9dc48358f8c2d386", size = 52234, upload-time = "2026-04-22T12:57:24.79Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/30/c5/bc236e1704e53980939ccff20c0802f288acff34e848e5bfc71e6a95a8b6/garminconnect-0.3.7.tar.gz", hash = "sha256:1c40ab3e0b07ab70510dad455d1924636bd02070f0664945e398400424e948c7", size = 90955, upload-time = "2026-07-26T06:29:18.655Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d2/5a/69af564ff61c87a725e0a6b6ceed4a01569a1caced2c136042c778907244/garminconnect-0.3.3-py3-none-any.whl", hash = "sha256:e11dbbddf20abd60d5c8fbde1e7c688ca175a905237dfec8837ee935a1aca803", size = 47814, upload-time = "2026-04-22T12:57:23.175Z" },
+    { url = "https://files.pythonhosted.org/packages/8e/16/c531e66e176570d0088be0cb7db30d9886ac0cdd9187872d00a4243625c4/garminconnect-0.3.7-py3-none-any.whl", hash = "sha256:a44137b663e08d7979ca1d497f444c6ca7a09197f991199c62aab124777b5983", size = 85155, upload-time = "2026-07-26T06:29:17.255Z" },
 ]
 
 [[package]]
@@ -355,7 +355,7 @@ wheels = [
 
 [[package]]
 name = "requests"
-version = "2.32.3"
+version = "2.34.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "certifi" },
@@ -363,9 +363,9 @@ dependencies = [
     { name = "idna" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/63/70/2bf7780ad2d390a8d301ad0b550f1581eadbd9a20f896afe06353c2a2913/requests-2.32.3.tar.gz", hash = "sha256:55365417734eb18255590a9ff9eb97e9e1da868d4ccd6402399eaf68af20a760", size = 131218, upload-time = "2024-05-29T15:37:49.536Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ac/c3/e2a2b89f2d3e2179abd6d00ebd70bff6273f37fb3e0cc209f48b39d00cbf/requests-2.34.2.tar.gz", hash = "sha256:f288924cae4e29463698d6d60bc6a4da69c89185ad1e0bcc4104f584e960b9ed", size = 142856, upload-time = "2026-05-14T19:25:27.735Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f9/9b/335f9764261e915ed497fcdeb11df5dfd6f7bf257d4a6a2a686d80da4d54/requests-2.32.3-py3-none-any.whl", hash = "sha256:70761cfe03c773ceb22aa2f671b4757976145175cdfca038c02654d061d6dcc6", size = 64928, upload-time = "2024-05-29T15:37:47.027Z" },
+    { url = "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl", hash = "sha256:2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0", size = 73075, upload-time = "2026-05-14T19:25:26.443Z" },
 ]
 
 [[package]]
