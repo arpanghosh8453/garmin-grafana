@@ -47,6 +47,14 @@ A docker container to fetch data from Garmin servers and store the data in a loc
 
 ![Dashboard](https://github.com/arpanghosh8453/garmin-grafana/blob/main/Grafana_Dashboard/Garmin-Grafana-Dashboard-Preview.png?raw=true)
 
+### Strength Training Dashboard
+
+A separate dashboard for weightlifting, built on the `StrengthExerciseSet` and `StrengthHRZones`
+measurements. It covers estimated 1RM progression per exercise, training volume, personal records,
+exercise balance, a set-level workout log, and HR zone time during strength sessions.
+
+![Strength Training Dashboard](https://github.com/arpanghosh8453/garmin-grafana/blob/main/Grafana_Dashboard/Garmin-Strength-Training-Dashboard-Preview.png?raw=true)
+
 ## Features
 
 - Automatic data collection from Garmin
@@ -162,6 +170,8 @@ sed -i '' 's/\${DS_GARMIN_STATS}/garmin_influxdb/g' Grafana_Dashboard/Garmin-Gra
 7. Now you can check out the `http://localhost:3000` to reach Grafana (by default), do the initial setup with the default username `admin` and password `admin`. If you have cloned the repository as instructed in step 1, and using self-provisioning for the grafana dashboards + databases, then you should have an automatic dashboard setup under the Dashboards section named as `Garmin-Grafana` filled with data! - and you are done!
 8. if you are not using self-provisioning, then you need to manually add influxdb as the data source and continue follow the rest of these instructions. Please note the influxdb hostname is set as `influxdb` with port `8086` so you should use `http://influxdb:8086` for the address during data source setup and not `http://localhost:8086` because influxdb is a running as a separate container but part of the same docker network and stack. Here the database name should be `GarminStats` matching the influxdb DB name from the docker compose. The query language used for the dashboard is `influxql` which is supported by both InfluxDB 1.x and 3.x, so please select that from the language dropdown during setup. Use the same username and password you used for your influxdb container (check your docker compose config for influxdb container, here we used `influxdb_user` and `influxdb_secret_password` in default configuration) Test the connection to make sure the influxdb is up and reachable (you are good to go if it finds the measurements when you test the connection)
 9. To use the Grafana dashboard with manual import, please use the [JSON file](https://github.com/arpanghosh8453/garmin-grafana/blob/main/Grafana_Dashboard/Garmin-Grafana-Dashboard.json) downloaded directly from GitHub or use the import code **23245** to pull them directly from the Grafana dashboard cloud. In the Grafana dashboard, the heatmap panels require an additional plugin that you must install. This can be done by using the `GF_PLUGINS_PREINSTALL=marcusolsson-hourly-heatmap-panel` environment variable like in the [compose-example.yml](./compose-example.yml) file, or after the creation of the container very easily with docker commands. Just run `docker exec -it grafana grafana cli plugins install marcusolsson-hourly-heatmap-panel` and then run `docker restart grafana` to apply that plugin update. Now, you should be able to see the Heatmap panels on the dashboard loading successfully.
+
+10. If you do strength training, you can additionally import the [Strength Training dashboard](https://github.com/arpanghosh8453/garmin-grafana/blob/main/Grafana_Dashboard/Garmin-Strength-Training-Dashboard.json). It uses only core Grafana panels (no extra plugins) and picks its InfluxDB data source from a dashboard dropdown, so it needs no `sed` substitution. It reads the `StrengthExerciseSet` and `StrengthHRZones` measurements, so it stays empty until you log a strength activity. Since strength data is sparse compared to daily metrics, its default time range is the last 6 months.
 
 > [!NOTE]
 > When you run this for the first time, it will only automatically fetch the data for **last 7 days** only and keep pulling new data that syncs with Garmin Connect moving forward. In order to sync back older data, use the following command replacing the YYYY-MM-DD with appropriate start and end dates (MANUAL_START_DATE value must be older than MANUAL_END_DATE value)
