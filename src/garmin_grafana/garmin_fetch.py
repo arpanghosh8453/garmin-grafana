@@ -207,6 +207,24 @@ def write_points_to_influxdb(points):
             logging.info("Success : updated influxDB database with new points")
     except (InfluxDBClientError, InfluxDBError) as err:
         logging.error("Write failed : Unable to connect with database! " + str(err))
+# %%
+def safe_int(value):
+    """Safely cast Garmin API values to integer, defaulting to 0 for missing or string values."""
+    if value is None:
+        return 0
+    try:
+        return int(float(value))
+    except (ValueError, TypeError):
+        return 0
+# %%
+def safe_float(value):
+    """Safely cast Garmin API values to float, defaulting to 0.0 for missing or string values."""
+    if not value:
+        return 0.0
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return 0.0
 
 # %%
 def get_daily_stats(date_str):
@@ -828,9 +846,9 @@ def get_strength_training_data(strength_activity_id_dict):
                     "ActivityName": activity_name,
                     "SetOrder": int(exercise.get('setOrder', set_counter)),
                     "SetType": set_type,
-                    "Reps": int(exercise.get('repetitionCount', 0)),
-                    "Weight_kg": weight_kg,
-                    "Duration_s": duration_s,
+                    "Reps": safe_int(exercise.get('repetitionCount')),
+                    "Weight_kg": safe_int(weight_kg),
+                    "Duration_s": safe_int(duration_s),
                 }
                 exercise_set_points.append({
                     "measurement": "StrengthExerciseSet",
