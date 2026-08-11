@@ -832,9 +832,9 @@ def get_strength_training_data(strength_activity_id_dict):
                 category = exercise_info.get('category', 'UNKNOWN')
                 exercise_name = exercise_info.get('name', '')
                 exercise_label = f"{category}/{exercise_name}" if exercise_name else category
-                weight_g = float(exercise.get('weight', 0) or 0)
+                weight_g = safe_float(exercise.get('weight'))
                 weight_kg = weight_g / 1000.0
-                duration_s = float(exercise.get('duration', 0) or 0)
+                duration_s = safe_float(exercise.get('duration'))
                 start_ts = exercise.get('startTime')
                 if start_ts:
                     set_time = datetime.strptime(start_ts.split('.')[0], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=pytz.UTC).isoformat()
@@ -847,8 +847,8 @@ def get_strength_training_data(strength_activity_id_dict):
                     "SetOrder": int(exercise.get('setOrder', set_counter)),
                     "SetType": set_type,
                     "Reps": safe_int(exercise.get('repetitionCount')),
-                    "Weight_kg": safe_int(weight_kg),
-                    "Duration_s": safe_int(duration_s),
+                    "Weight_kg": weight_kg,
+                    "Duration_s": duration_s,
                 }
                 exercise_set_points.append({
                     "measurement": "StrengthExerciseSet",
