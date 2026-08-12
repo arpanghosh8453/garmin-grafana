@@ -1159,7 +1159,7 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "ActivityName": activity_type,
                                     "Activity_ID": activityID,
                                     "Elapsed_Time": lap_record.get('total_elapsed_time', None),
-                                    "Sport": lap_record.get('sport', None),
+                                    "Sport": str(lap_record.get('sport', None)),
                                     "Lengths": lap_record.get('num_lengths', None),
                                     "Length_Index": lap_record.get('first_length_index', None),
                                     "Distance": lap_record.get('total_distance', None),
