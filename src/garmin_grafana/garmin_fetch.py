@@ -682,7 +682,8 @@ def get_activity_summary(date_str):
             else:
                 logging.warning(f"No HR zone data found for activity: {activity_id}")
 
-            points_list.append({
+            activity_summary_points = []
+            activity_summary_points.append({
                 "measurement":  "ActivitySummary",
                 "time": datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC).isoformat(),
                 "tags": {
@@ -728,7 +729,7 @@ def get_activity_summary(date_str):
                     'vigorousIntensityMinutes': activity.get('vigorousIntensityMinutes'),
                 }
             })
-            points_list.append({
+            activity_summary_points.append({
                 "measurement":  "ActivitySummary",
                 "time": (datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC) + timedelta(seconds=int(activity.get('elapsedDuration', activity.get('duration', 0))))).isoformat(),
                 "tags": {
@@ -744,43 +745,57 @@ def get_activity_summary(date_str):
                     'activityType': "No Activity",
                 }
             })
-            logging.info(f"Success : Fetching Activity summary with id {activity.get('activityId')} for date {date_str}")
+            if purge_existing_activity_measurements(activity_id, ("ActivitySummary",), "ActivitySummary"):
+                points_list.extend(activity_summary_points)
+                logging.info(f"Success : Fetching Activity summary with id {activity.get('activityId')} for date {date_str}")
+            else:
+                logging.warning(
+                    f"Skipped : ActivitySummary refresh for activity {activity_id} because stale rows could not be purged"
+                )
         else:
             logging.warning(f"Skipped : Start Timestamp missing for activity id {activity.get('activityId')} for date {date_str}")
     return points_list, activity_with_gps_id_dict, strength_activity_id_dict
 
 # %%
-def purge_existing_strength_exercise_sets(activity_id):
-    """Delete stale strength rows before rewriting the current Garmin snapshot.
+def purge_existing_activity_measurements(activity_id, measurements, measurement_label):
+    """Delete stale activity rows before rewriting the current Garmin snapshot.
 
-    Edited Garmin exercises can change exercise tags. Without removing the
-    previous series first, InfluxDB keeps the stale and corrected rows in
-    parallel because the tags no longer match.
+    Activity-derived series can keep stale rows in parallel when Garmin changes
+    mutable tags such as ActivitySelector, activity type, or exercise labels.
+    Purging by ActivityID lets the refreshed snapshot replace the old one.
     """
+    if isinstance(measurements, str):
+        measurements = [measurements]
+
+    measurement_names = [measurement for measurement in measurements if measurement]
+    if not measurement_names:
+        return True
+
     if INFLUXDB_VERSION != '1':
         logging.warning(
-            f"InfluxDB version {INFLUXDB_VERSION} does not support purging StrengthExerciseSet series for activity {activity_id}. "
-            "Applying the default refresh behavior; edited exercises may produce duplicated rows."
+            f"InfluxDB version {INFLUXDB_VERSION} does not support purging {measurement_label} series for activity {activity_id}. "
+            "Applying the default refresh behavior; edited activities may produce duplicated rows."
         )
         return True
 
     if not hasattr(influxdbclient, 'delete_series'):
         logging.warning(
-            f"InfluxDB client does not support purging StrengthExerciseSet series for activity {activity_id}. "
-            "Applying the default refresh behavior; edited exercises may produce duplicated rows."
+            f"InfluxDB client does not support purging {measurement_label} series for activity {activity_id}. "
+            "Applying the default refresh behavior; edited activities may produce duplicated rows."
         )
         return True
 
     try:
-        influxdbclient.delete_series(
-            measurement='StrengthExerciseSet',
-            tags={'ActivityID': str(activity_id)},
-        )
-        logging.info(f"Purged existing StrengthExerciseSet series for activity {activity_id}")
+        for measurement in measurement_names:
+            influxdbclient.delete_series(
+                measurement=measurement,
+                tags={'ActivityID': str(activity_id)},
+            )
+        logging.info(f"Purged existing {measurement_label} series for activity {activity_id}")
         return True
     except (InfluxDBClientError, InfluxDBError) as err:
         logging.warning(
-            f"Failed to purge existing StrengthExerciseSet series for activity {activity_id}: {err}"
+            f"Failed to purge existing {measurement_label} series for activity {activity_id}: {err}"
         )
         return False
 
@@ -800,6 +815,7 @@ def get_strength_training_data(strength_activity_id_dict):
         activity_name = activity_info.get('activityName', activity_type)
 
         exercise_set_points = None
+        strength_hr_zone_points = None
         try:
             exercise_sets_data = garmin_obj.get_activity_exercise_sets(activity_id)
             exercises = exercise_sets_data.get('exerciseSets', []) or []
@@ -850,7 +866,7 @@ def get_strength_training_data(strength_activity_id_dict):
             logging.warning(f"Failed to fetch exercise sets for activity {activity_id}: {err}")
 
         if exercise_set_points is not None:
-            if purge_existing_strength_exercise_sets(activity_id):
+            if purge_existing_activity_measurements(activity_id, ("StrengthExerciseSet",), "StrengthExerciseSet"):
                 points_list.extend(exercise_set_points)
             else:
                 logging.warning(
@@ -859,6 +875,7 @@ def get_strength_training_data(strength_activity_id_dict):
 
         try:
             hr_zones_data = garmin_obj.get_activity_hr_in_timezones(activity_id)
+            strength_hr_zone_points = []
             for zone_info in hr_zones_data:
                 zone_number = zone_info.get('zoneNumber', zone_info.get('zone'))
                 if zone_number is None:
@@ -870,7 +887,7 @@ def get_strength_training_data(strength_activity_id_dict):
                     "SecsInZone": zone_info.get('secsInZone'),
                     "ZoneLowBoundary": zone_info.get('zoneLowBoundary'),
                 }
-                points_list.append({
+                strength_hr_zone_points.append({
                     "measurement": "StrengthHRZones",
                     "time": (activity_start_time + timedelta(milliseconds=int(zone_number))).isoformat(),
                     "tags": {
@@ -884,6 +901,14 @@ def get_strength_training_data(strength_activity_id_dict):
             logging.info(f"Success : Fetching strength HR zones for activity {activity_id}")
         except Exception as err:
             logging.warning(f"Failed to fetch HR zones for activity {activity_id}: {err}")
+
+        if strength_hr_zone_points is not None:
+            if purge_existing_activity_measurements(activity_id, ("StrengthHRZones",), "StrengthHRZones"):
+                points_list.extend(strength_hr_zone_points)
+            else:
+                logging.warning(
+                    f"Skipped : StrengthHRZones refresh for activity {activity_id} because stale rows could not be purged"
+                )
 
     return points_list
 
@@ -1030,6 +1055,8 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
     points_list = []
     for activityID in activityIDdict.keys():
         activity_type = activityIDdict[activityID]
+        activity_points = []
+        detail_measurements = ["ActivityGPS"]
         if (activityID in PARSED_ACTIVITY_ID_LIST) and (not FORCE_REPROCESS_ACTIVITIES):
             logging.info(f"Skipping : Activity ID {activityID} has already been processed within current runtime")
             return []
@@ -1052,6 +1079,7 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                     all_sessions_list = [record.get_values() for record in fitfile.get_messages('session')]
                     all_lengths_list = [record.get_values() for record in fitfile.get_messages('length')]
                     all_laps_list = [record.get_values() for record in fitfile.get_messages('lap')]
+                    detail_measurements = ["ActivityGPS", "ActivitySession", "ActivityLength", "ActivityLap"]
                     if len(all_records_list) == 0:
                         raise FileNotFoundError(f"No records found in FIT file for Activity ID {activityID} - Discarding FIT file")
                     else:
@@ -1090,7 +1118,7 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "Step_Length": parsed_record.get('step_length', None)
                                 }
                             }
-                            points_list.append(point)
+                            activity_points.append(point)
                     for session_record in all_sessions_list:
                         if session_record.get('start_time') or session_record.get('timestamp'):
                             point = {
@@ -1118,7 +1146,7 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "Recovery_Time": session_record.get('recovery_time', None)
                                 }
                             }
-                            points_list.append(point)
+                            activity_points.append(point)
                     for length_record in all_lengths_list:
                         if length_record.get('start_time') or length_record.get('timestamp'):
                             point = {
@@ -1142,7 +1170,7 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "Avg_Cadence": length_record.get('avg_swimming_cadence', None)
                                 }
                             }
-                            points_list.append(point)
+                            activity_points.append(point)
                     for lap_record in all_laps_list:
                         if lap_record.get('start_time') or lap_record.get('timestamp'):
                             point = {
@@ -1183,15 +1211,16 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "Avg_Step_Length": lap_record.get('avg_step_length', None)
                                 }
                             }
-                            points_list.append(point)
+                            activity_points.append(point)
                     # Extract cycling dynamics and advanced power metrics
                     if 'cycling_dynamics' in FETCH_SELECTION:
+                        detail_measurements.append("CyclingDynamics")
                         cycling_point = _build_cycling_dynamics_point(
                             all_records_list, all_sessions_list,
                             activityID, activity_type, activity_start_time
                         )
                         if cycling_point:
-                            points_list.append(cycling_point)
+                            activity_points.append(cycling_point)
                             logging.info(f"Activity ID {activityID}: CyclingDynamics point added ({len(cycling_point['fields']) - 2} metrics)")
 
                     if KEEP_FIT_FILES:
@@ -1271,11 +1300,18 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                 "lap": lap_index
                             }
                         }
-                        points_list.append(point)
+                        activity_points.append(point)
                     
                     lap_index += 1
-        logging.info(f"Success : Fetching detailed activity for Activity ID {activityID}")
-        PARSED_ACTIVITY_ID_LIST.append(activityID)
+
+        if purge_existing_activity_measurements(activityID, detail_measurements, "activity detail"):
+            points_list.extend(activity_points)
+            logging.info(f"Success : Fetching detailed activity for Activity ID {activityID}")
+            PARSED_ACTIVITY_ID_LIST.append(activityID)
+        else:
+            logging.warning(
+                f"Skipped : activity detail refresh for activity {activityID} because stale rows could not be purged"
+            )
     return points_list
 
 def get_lactate_threshold(date_str):
