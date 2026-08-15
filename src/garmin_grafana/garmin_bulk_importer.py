@@ -453,9 +453,14 @@ class GarminBulkExport:
                     best_delta = delta
 
         if not best_match:
-            self.fail(
+            logging.warning(
                 f"No matching FIT file found for activityId={activityId} "
-                f"({activity_start.isoformat()})"
+                f"({activity_start.isoformat()}) - this activity likely has no "
+                f"associated device FIT file (e.g. manual entry or multi-sport "
+                f"parent activity). Skipping GPS/lap/session data for it."
+            )
+            raise FileNotFoundError(
+                f"No matching FIT file found for activityId={activityId}"
             )
 
         logging.info(
