@@ -204,6 +204,14 @@ class GarminBulkExport:
                 a["elevationGain"] = a["elevationGain"] / 100
             if a.get("elevationLoss") is not None:
                 a["elevationLoss"] = a["elevationLoss"] / 100
+            # Bulk export stores duration fields in milliseconds,
+            # but the live API expects seconds.
+            if a.get("duration") is not None:
+                a["duration"] = a["duration"] / 1000
+            if a.get("elapsedDuration") is not None:
+                a["elapsedDuration"] = a["elapsedDuration"] / 1000
+            if a.get("movingDuration") is not None:
+                a["movingDuration"] = a["movingDuration"] / 1000
         logging.info("Loading %d activities", len(activities))
         return sorted(activities, key=lambda o: o["startTimeGMT"])
 
@@ -453,9 +461,14 @@ class GarminBulkExport:
                     best_delta = delta
 
         if not best_match:
-            self.fail(
+            logging.warning(
                 f"No matching FIT file found for activityId={activityId} "
-                f"({activity_start.isoformat()})"
+                f"({activity_start.isoformat()}) - this activity likely has no "
+                f"associated device FIT file (e.g. manual entry or multi-sport "
+                f"parent activity). Skipping GPS/lap/session data for it."
+            )
+            raise FileNotFoundError(
+                f"No matching FIT file found for activityId={activityId}"
             )
 
         logging.info(
