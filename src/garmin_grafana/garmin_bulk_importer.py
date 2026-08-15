@@ -196,7 +196,14 @@ class GarminBulkExport:
             a["averageSpeed"] = a.get("avgSpeed")
             a["maxHR"] = a.get("maxHr")
             a["averageHR"] = a.get("avgHr")
-
+            # Bulk export stores distance/elevation in centimeters,
+            # but the live API (and garmin_fetch.py) expects meters.
+            if a.get("distance") is not None:
+                a["distance"] = a["distance"] / 100
+            if a.get("elevationGain") is not None:
+                a["elevationGain"] = a["elevationGain"] / 100
+            if a.get("elevationLoss") is not None:
+                a["elevationLoss"] = a["elevationLoss"] / 100
         logging.info("Loading %d activities", len(activities))
         return sorted(activities, key=lambda o: o["startTimeGMT"])
 
