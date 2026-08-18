@@ -369,4 +369,4 @@ Too complicated to self host just to see your FIT file activity data? What about
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=arpanghosh8453/garmin-grafana&type=Date)](https://www.star-history.com/#arpanghosh8453/garmin-grafana&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=arpanghosh8453/garmin-grafana&type=Date)](https://star-history.dera.page/#arpanghosh8453/garmin-grafana&Date)
