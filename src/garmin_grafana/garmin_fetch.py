@@ -730,7 +730,7 @@ def get_activity_summary(date_str):
             })
             points_list.append({
                 "measurement":  "ActivitySummary",
-                "time": (datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC) + timedelta(seconds=int(activity.get('elapsedDuration', activity.get('duration', 0))))).isoformat(),
+                "time": (datetime.strptime(activity["startTimeGMT"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.UTC) + timedelta(seconds=int(activity.get('elapsedDuration') or activity.get('duration') or 0))).isoformat(),
                 "tags": {
                     "Device": GARMIN_DEVICENAME,
                     "Database_Name": INFLUXDB_DATABASE,

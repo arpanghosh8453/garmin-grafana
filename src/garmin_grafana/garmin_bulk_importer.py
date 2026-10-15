@@ -196,7 +196,40 @@ class GarminBulkExport:
             a["averageSpeed"] = a.get("avgSpeed")
             a["maxHR"] = a.get("maxHr")
             a["averageHR"] = a.get("avgHr")
-
+            # Bulk export stores distance/elevation in centimeters,
+            # but the live API (and garmin_fetch.py) expects meters.
+            if a.get("distance") is not None:
+                a["distance"] = a["distance"] / 100
+            if a.get("elevationGain") is not None:
+                a["elevationGain"] = a["elevationGain"] / 100
+            if a.get("elevationLoss") is not None:
+                a["elevationLoss"] = a["elevationLoss"] / 100
+            # Bulk export stores duration fields in milliseconds,
+            # but the live API expects seconds.
+            if a.get("duration") is not None:
+                a["duration"] = a["duration"] / 1000
+            if a.get("elapsedDuration") is not None:
+                a["elapsedDuration"] = a["elapsedDuration"] / 1000
+            if a.get("movingDuration") is not None:
+                a["movingDuration"] = a["movingDuration"] / 1000
+            # Bulk export stores speeds in centimeters per millisecond,
+            # but the live API expects meters per second.
+            if a.get("averageSpeed") is not None:
+                a["averageSpeed"] = a["averageSpeed"] * 10
+            if a.get("maxSpeed") is not None:
+                a["maxSpeed"] = a["maxSpeed"] * 10
+            # Bulk export stores calories multiplied by 4.19 (Garmin's
+            # kcal to kJ factor), but the live API expects kilocalories.
+            if a.get("calories") is not None:
+                a["calories"] = a["calories"] / 4.19
+            if a.get("bmrCalories") is not None:
+                a["bmrCalories"] = a["bmrCalories"] / 4.19
+            # Bulk export stores time in HR zones in milliseconds,
+            # but the live API expects seconds.
+            for zone in range(1, 6):
+                key = f"hrTimeInZone_{zone}"
+                if a.get(key) is not None:
+                    a[key] = a[key] / 1000
         logging.info("Loading %d activities", len(activities))
         return sorted(activities, key=lambda o: o["startTimeGMT"])
 
@@ -446,9 +479,14 @@ class GarminBulkExport:
                     best_delta = delta
 
         if not best_match:
-            self.fail(
+            logging.warning(
                 f"No matching FIT file found for activityId={activityId} "
-                f"({activity_start.isoformat()})"
+                f"({activity_start.isoformat()}) - this activity likely has no "
+                f"associated device FIT file (e.g. manual entry or multi-sport "
+                f"parent activity). Skipping GPS/lap/session data for it."
+            )
+            raise FileNotFoundError(
+                f"No matching FIT file found for activityId={activityId}"
             )
 
         logging.info(
