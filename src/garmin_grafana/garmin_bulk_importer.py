@@ -212,6 +212,24 @@ class GarminBulkExport:
                 a["elapsedDuration"] = a["elapsedDuration"] / 1000
             if a.get("movingDuration") is not None:
                 a["movingDuration"] = a["movingDuration"] / 1000
+            # Bulk export stores speeds in centimeters per millisecond,
+            # but the live API expects meters per second.
+            if a.get("averageSpeed") is not None:
+                a["averageSpeed"] = a["averageSpeed"] * 10
+            if a.get("maxSpeed") is not None:
+                a["maxSpeed"] = a["maxSpeed"] * 10
+            # Bulk export stores calories multiplied by 4.19 (Garmin's
+            # kcal to kJ factor), but the live API expects kilocalories.
+            if a.get("calories") is not None:
+                a["calories"] = a["calories"] / 4.19
+            if a.get("bmrCalories") is not None:
+                a["bmrCalories"] = a["bmrCalories"] / 4.19
+            # Bulk export stores time in HR zones in milliseconds,
+            # but the live API expects seconds.
+            for zone in range(1, 6):
+                key = f"hrTimeInZone_{zone}"
+                if a.get(key) is not None:
+                    a[key] = a[key] / 1000
         logging.info("Loading %d activities", len(activities))
         return sorted(activities, key=lambda o: o["startTimeGMT"])
 
