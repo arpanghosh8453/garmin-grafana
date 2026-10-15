@@ -59,7 +59,7 @@ MAX_CONSECUTIVE_500_ERRORS = int(os.getenv("MAX_CONSECUTIVE_500_ERRORS", 10)) # 
 INFLUXDB_ENDPOINT_IS_HTTP = False if os.getenv("INFLUXDB_ENDPOINT_IS_HTTP") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional
 GARMIN_DEVICENAME_AUTOMATIC = False if GARMIN_DEVICENAME != "Unknown" else True # optional
 UPDATE_INTERVAL_SECONDS = int(os.getenv("UPDATE_INTERVAL_SECONDS", 300)) # optional
-FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,fitness_age,vo2,activity,race_prediction,body_composition,lifestyle") # additional available values are lactate_threshold,training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration,solar_intensity,cycling_dynamics which you can add to the list seperated by , without any space
+FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,fitness_age,vo2,activity,race_prediction,body_composition,lifestyle") # additional available values are lactate_threshold,training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration,nutrition,solar_intensity,cycling_dynamics which you can add to the list seperated by , without any space
 ACTIVITY_TYPE_FILTER = [t.strip().lower() for t in os.getenv("ACTIVITY_TYPE_FILTER", "").split(",") if t.strip()] # optional, comma-separated list of activity typeKeys to import only specific activity types. Leave empty to import all. Known typeKeys: running,treadmill_running,indoor_running,cycling,indoor_cycling,road_biking,mountain_biking,walking,hiking,mountaineering,strength_training,hiit,indoor_cardio,elliptical,lap_swimming,open_water_swimming,rock_climbing,indoor_climbing,tennis_v2,kayaking_v2,boating_v2,multi_sport,other
 LACTATE_THRESHOLD_SPORTS = os.getenv("LACTATE_THRESHOLD_SPORTS", "RUNNING").upper().split(",") # Garmin currently implements RUNNING, but has provisions for CYCLING, and SWIMMING
 KEEP_FIT_FILES = True if os.getenv("KEEP_FIT_FILES") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional
@@ -1533,6 +1533,42 @@ def get_hydration(date_str):
     return points_list
 
 
+def get_nutrition_daily_summary(date_str):
+    points_list = []
+    try:
+        nutrition_dict = garmin_obj.get_nutrition_daily_food_log(date_str) or {}
+        content = nutrition_dict.get('dailyNutritionContent') or {}
+        goals = nutrition_dict.get('dailyNutritionGoals') or {}
+        # Skip days with no food logged (goals exist even on empty days, so guard on consumed calories)
+        if content.get('calories') is None:
+            return points_list
+        data_fields = {
+            'CaloriesConsumed': content.get('calories', None),
+            'CarbsConsumed_g': content.get('carbs', None),
+            'FatConsumed_g': content.get('fat', None),
+            'ProteinConsumed_g': content.get('protein', None),
+            'CaloriesPercentageOfGoal': content.get('caloriesPercentage', None),
+            'CaloriesGoal': goals.get('calories', None),
+            'CaloriesGoalAdjusted': goals.get('adjustedCalories', None),
+            'CarbsGoal_g': goals.get('carbs', None),
+            'FatGoal_g': goals.get('fat', None),
+            'ProteinGoal_g': goals.get('protein', None)
+        }
+        points_list.append({
+            "measurement":  "NutritionDailySummary",
+            "time": datetime.strptime(date_str,"%Y-%m-%d").replace(hour=0, tzinfo=pytz.UTC).isoformat(), # Use GMT 00:00 for daily record
+            "tags": {
+                "Device": GARMIN_DEVICENAME,
+                "Database_Name": INFLUXDB_DATABASE
+            },
+            "fields": data_fields
+        })
+        logging.info(f"Success : Fetching Nutrition Daily Summary for date {date_str}")
+    except Exception as e:
+        logging.warning(f"Failed to fetch Nutrition Daily Summary for date {date_str}: {e}")
+    return points_list
+
+
 def get_solar_intensity(date_str):
     points_list = []
 
@@ -1676,6 +1712,8 @@ def daily_fetch_write(date_str):
         write_points_to_influxdb(get_blood_pressure(date_str))
     if 'hydration' in FETCH_SELECTION:
         write_points_to_influxdb(get_hydration(date_str))
+    if 'nutrition' in FETCH_SELECTION:
+        write_points_to_influxdb(get_nutrition_daily_summary(date_str))
     if 'activity' in FETCH_SELECTION:
         activity_summary_points_list, activity_with_gps_id_dict, strength_activity_id_dict = get_activity_summary(date_str)
         write_points_to_influxdb(activity_summary_points_list)
