@@ -340,7 +340,7 @@ def get_sleep_data(date_str):
             "avgSleepStress": sleep_json.get("avgSleepStress"),
             "sleepScore": ((sleep_json.get("sleepScores") or {}).get("overall") or {}).get("value"),
             "restlessMomentsCount": all_sleep_data.get("restlessMomentsCount"),
-            "avgOvernightHrv": all_sleep_data.get("avgOvernightHrv"),
+            "avgOvernightHrv": float(val) if (val := all_sleep_data.get("avgOvernightHrv")) is not None else None, # Always write as float to avoid InfluxDB field-type conflicts (integer vs float)
             "bodyBatteryChange": all_sleep_data.get("bodyBatteryChange"),
             "restingHeartRate": all_sleep_data.get("restingHeartRate"),
             "avgSkinTempDeviationC": all_sleep_data.get("avgSkinTempDeviationC"),
