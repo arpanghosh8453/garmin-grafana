@@ -212,7 +212,7 @@ def write_points_to_influxdb(points):
 def get_daily_stats(date_str):
     points_list = []
     stats_json = garmin_obj.get_stats(date_str)
-    if stats_json['wellnessStartTimeGmt'] and datetime.strptime(date_str, "%Y-%m-%d") < datetime.today():
+    if stats_json['wellnessStartTimeGmt']:
         points_list.append({
             "measurement":  "DailyStats",
             "time": pytz.timezone("UTC").localize(datetime.strptime(stats_json['wellnessStartTimeGmt'], "%Y-%m-%dT%H:%M:%S.%f")).isoformat(),
