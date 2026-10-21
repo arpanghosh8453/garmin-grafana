@@ -1541,8 +1541,16 @@ def get_solar_intensity(date_str):
         return points_list
 
     si_all = garmin_obj.get_device_solar_data(GARMIN_DEVICEID, date_str) or {}
-    if len(si_all.get('solarDailyDataDTOs', [])) > 0:
-        si_list = si_all['solarDailyDataDTOs'][0].get('solarInputReadings', [])
+    # Garmin occasionally returns a list instead of the expected dict on some dates;
+    # normalize to the DTO list defensively to avoid "AttributeError: 'list' object has no attribute 'get'"
+    if isinstance(si_all, dict):
+        solar_dtos = si_all.get('solarDailyDataDTOs', [])
+    elif isinstance(si_all, list):
+        solar_dtos = si_all
+    else:
+        solar_dtos = []
+    if len(solar_dtos) > 0 and isinstance(solar_dtos[0], dict):
+        si_list = solar_dtos[0].get('solarInputReadings', [])
         for si_measurement in si_list:
             data_fields = {
                 'solarUtilization': si_measurement.get('solarUtilization', None),
