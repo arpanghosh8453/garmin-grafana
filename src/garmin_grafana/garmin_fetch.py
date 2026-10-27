@@ -1108,6 +1108,7 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "Activity_ID": activityID,
                                     "Sport": str(session_record.get('sport', None)), # Avoid partial write error 400 see #152#issuecomment-3084539416
                                     "Sub_Sport": str(session_record.get('sub_sport', None)),
+                                    "Sport_Profile_Name": session_record.get('unknown_110'), # FIT session field 110 is sport_profile_name as per Garmin fit SDK.
                                     "Pool_Length": session_record.get('pool_length', None),
                                     "Pool_Length_Unit": session_record.get('pool_length_unit', None),
                                     "Lengths": session_record.get('num_laps', None),
