@@ -826,9 +826,9 @@ def get_strength_training_data(strength_activity_id_dict):
                 data_fields = {
                     "Activity_ID": activity_id,
                     "ActivityName": activity_name,
-                    "SetOrder": int(exercise.get('setOrder', set_counter)),
+                    "SetOrder": int(exercise.get('setOrder') if exercise.get('setOrder') is not None else set_counter), # Garmin returns setOrder: null
                     "SetType": set_type,
-                    "Reps": int(exercise.get('repetitionCount', 0)),
+                    "Reps": int(exercise.get('repetitionCount') or 0), # null on warm-up/timed sets
                     "Weight_kg": weight_kg,
                     "Duration_s": duration_s,
                 }
