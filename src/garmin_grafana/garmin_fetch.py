@@ -59,7 +59,7 @@ MAX_CONSECUTIVE_500_ERRORS = int(os.getenv("MAX_CONSECUTIVE_500_ERRORS", 10)) # 
 INFLUXDB_ENDPOINT_IS_HTTP = False if os.getenv("INFLUXDB_ENDPOINT_IS_HTTP") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional
 GARMIN_DEVICENAME_AUTOMATIC = False if GARMIN_DEVICENAME != "Unknown" else True # optional
 UPDATE_INTERVAL_SECONDS = int(os.getenv("UPDATE_INTERVAL_SECONDS", 300)) # optional
-FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,fitness_age,vo2,activity,race_prediction,body_composition,lifestyle") # additional available values are lactate_threshold,training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration,solar_intensity,cycling_dynamics which you can add to the list seperated by , without any space
+FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,fitness_age,vo2,activity,race_prediction,body_composition,lifestyle") # additional available values are lactate_threshold,training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration,solar_intensity,cycling_dynamics,running_dynamics which you can add to the list seperated by , without any space
 ACTIVITY_TYPE_FILTER = [t.strip().lower() for t in os.getenv("ACTIVITY_TYPE_FILTER", "").split(",") if t.strip()] # optional, comma-separated list of activity typeKeys to import only specific activity types. Leave empty to import all. Known typeKeys: running,treadmill_running,indoor_running,cycling,indoor_cycling,road_biking,mountain_biking,walking,hiking,mountaineering,strength_training,hiit,indoor_cardio,elliptical,lap_swimming,open_water_swimming,rock_climbing,indoor_climbing,tennis_v2,kayaking_v2,boating_v2,multi_sport,other
 LACTATE_THRESHOLD_SPORTS = os.getenv("LACTATE_THRESHOLD_SPORTS", "RUNNING").upper().split(",") # Garmin currently implements RUNNING, but has provisions for CYCLING, and SWIMMING
 KEEP_FIT_FILES = True if os.getenv("KEEP_FIT_FILES") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional
@@ -1026,6 +1026,110 @@ def _build_cycling_dynamics_point(all_records_list, all_sessions_list, activityI
     }
 
 # %%
+def _running_dynamics_record_fields(record):
+    """Running dynamics fields of a FIT record message, in raw FIT units.
+
+    mm for vertical oscillation and step length, ms for ground contact time,
+    percent for vertical ratio and the two stance-time percentages.
+    """
+    return {
+        "Vertical_Oscillation": record.get('vertical_oscillation'),
+        "Vertical_Ratio": record.get('vertical_ratio'),
+        "Stance_Time": record.get('stance_time'), # ground contact time
+        "Stance_Time_Balance": record.get('stance_time_balance'), # % of stance time on the left foot
+        "Stance_Time_Percent": record.get('stance_time_percent'), # % of stride time in ground contact
+        "Step_Length": record.get('step_length'),
+    }
+
+
+def _running_dynamics_lap_fields(lap):
+    """Per-lap running dynamics averages of a FIT lap message, in raw FIT units."""
+    return {
+        "Avg_Vertical_Oscillation": lap.get('avg_vertical_oscillation'),
+        "Avg_Vertical_Ratio": lap.get('avg_vertical_ratio'),
+        "Avg_Stance_Time": lap.get('avg_stance_time'),
+        "Avg_Stance_Time_Balance": lap.get('avg_stance_time_balance'),
+        "Avg_Stance_Time_Percent": lap.get('avg_stance_time_percent'),
+        "Avg_Step_Length": lap.get('avg_step_length'),
+        "Avg_Running_Cadence": lap.get('avg_running_cadence'), # steps/min, unlike avg_cadence which running FIT files leave empty
+    }
+
+
+def _build_running_dynamics_point(all_records_list, all_sessions_list, activityID, activity_type, activity_start_time):
+    """Build one RunningDynamics point per activity: session averages plus min/max from the records."""
+    def nonzero_values(records, key):
+        return [r[key] for r in records if r.get(key) not in (None, 0)]
+
+    def record_average(records, key):
+        vals = nonzero_values(records, key)
+        return sum(vals) / len(vals) if vals else None
+
+    fields = {}
+
+    # --- Session-level pre-computed averages (primary source, raw FIT units) ---
+    if all_sessions_list:
+        session = all_sessions_list[0]
+        for src in [
+            'avg_vertical_oscillation',
+            'avg_vertical_ratio',
+            'avg_stance_time',
+            'avg_stance_time_balance',
+            'avg_stance_time_percent',
+            'avg_step_length',
+            'avg_running_cadence',
+        ]:
+            v = session.get(src)
+            if v is not None:
+                fields[src] = float(v)
+
+        for src in ['total_strides', 'max_running_cadence']:
+            v = session.get(src)
+            if v is not None:
+                fields[src] = int(v)
+
+    # --- Per-record fallback for devices whose session message lacks the averages ---
+    for src in [
+        'vertical_oscillation',
+        'vertical_ratio',
+        'stance_time',
+        'stance_time_balance',
+        'stance_time_percent',
+        'step_length',
+        'cadence',
+    ]:
+        dst = 'avg_running_cadence' if src == 'cadence' else f'avg_{src}'
+        if dst not in fields:
+            v = record_average(all_records_list, src)
+            if v is not None:
+                fields[dst] = v
+
+    # --- Per-activity range, useful for panels without a per-second time series ---
+    for src in ['vertical_oscillation', 'vertical_ratio', 'stance_time', 'step_length']:
+        vals = nonzero_values(all_records_list, src)
+        if vals:
+            fields[f'min_{src}'] = float(min(vals))
+            fields[f'max_{src}'] = float(max(vals))
+
+    # Guard: write nothing if the activity carries no running dynamics at all
+    if not fields:
+        return None
+
+    fields['ActivityName'] = activity_type
+    fields['Activity_ID'] = activityID
+
+    return {
+        "measurement": "RunningDynamics",
+        "time": activity_start_time.isoformat(),
+        "tags": {
+            "Device": GARMIN_DEVICENAME,
+            "Database_Name": INFLUXDB_DATABASE,
+            "ActivityID": activityID,
+            "ActivitySelector": activity_start_time.strftime('%Y%m%dT%H%M%SUTC-') + activity_type
+        },
+        "fields": fields
+    }
+
+# %%
 def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back to TCX
     points_list = []
     for activityID in activityIDdict.keys():
@@ -1084,10 +1188,7 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "Temperature": parsed_record.get('temperature', None),
                                     "Accumulated_Power": parsed_record.get('accumulated_power', None),
                                     "Power": parsed_record.get('power', None),
-                                    "Vertical_Oscillation": parsed_record.get('vertical_oscillation', None),
-                                    "Stance_Time": parsed_record.get('stance_time', None),
-                                    "Vertical_Ratio": parsed_record.get('vertical_ratio', None),
-                                    "Step_Length": parsed_record.get('step_length', None)
+                                    **(_running_dynamics_record_fields(parsed_record) if 'running_dynamics' in FETCH_SELECTION else {})
                                 }
                             }
                             points_list.append(point)
@@ -1178,10 +1279,7 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "Max_HR": lap_record.get('max_heart_rate', None),
                                     "Avg_Cadence": lap_record.get('avg_cadence', None),
                                     "Avg_Temperature": lap_record.get('avg_temperature', None),
-                                    "Avg_Vertical_Oscillation": lap_record.get('avg_vertical_oscillation', None),
-                                    "Avg_Stance_Time": lap_record.get('avg_stance_time', None),
-                                    "Avg_Vertical_Ratio": lap_record.get('avg_vertical_ratio', None),
-                                    "Avg_Step_Length": lap_record.get('avg_step_length', None)
+                                    **(_running_dynamics_lap_fields(lap_record) if 'running_dynamics' in FETCH_SELECTION else {})
                                 }
                             }
                             points_list.append(point)
@@ -1194,6 +1292,16 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                         if cycling_point:
                             points_list.append(cycling_point)
                             logging.info(f"Activity ID {activityID}: CyclingDynamics point added ({len(cycling_point['fields']) - 2} metrics)")
+
+                    # Extract running dynamics (stride length, vertical oscillation/ratio, ground contact)
+                    if 'running_dynamics' in FETCH_SELECTION:
+                        running_point = _build_running_dynamics_point(
+                            all_records_list, all_sessions_list,
+                            activityID, activity_type, activity_start_time
+                        )
+                        if running_point:
+                            points_list.append(running_point)
+                            logging.info(f"Activity ID {activityID}: RunningDynamics point added ({len(running_point['fields']) - 2} metrics)")
 
                     if KEEP_FIT_FILES:
                         os.makedirs(FIT_FILE_STORAGE_LOCATION, exist_ok=True)

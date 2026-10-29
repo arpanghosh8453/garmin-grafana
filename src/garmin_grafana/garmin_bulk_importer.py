@@ -558,7 +558,12 @@ if __name__ == "__main__":
         time.sleep(5)
 
     # These are the only types of data that are included in the bulk export.
-    garmin_fetch.FETCH_SELECTION = "daily_avg,sleep,activity,hydration"
+    # Opt-in measurements still follow the user's FETCH_SELECTION, which this
+    # override would otherwise drop.
+    bulk_selection = "daily_avg,sleep,activity,hydration"
+    if 'running_dynamics' in garmin_fetch.FETCH_SELECTION:
+        bulk_selection += ",running_dynamics"
+    garmin_fetch.FETCH_SELECTION = bulk_selection
 
     garmin_fetch.fetch_write_bulk(args.start_date, args.end_date)
     logging.info(
