@@ -1079,7 +1079,7 @@ def _stryd_values(message, stryd_indices, field_map):
                 continue
     return values
 
-def _build_stryd_point(stryd_records, stryd_session, activityID, activity_type, activity_start_time):
+def _build_stryd_point(stryd_records, stryd_session, all_sessions_list, activityID, activity_type, activity_start_time):
     """One StrydMetrics point per activity: session values plus averages of the per-second data."""
     fields = dict(stryd_session)
 
@@ -1109,6 +1109,10 @@ def _build_stryd_point(stryd_records, stryd_session, activityID, activity_type, 
     if not fields:
         return None
 
+    # The activity's distance, so queries can leave out short activities without a join
+    distance = all_sessions_list[0].get('total_distance') if all_sessions_list else None
+    if distance is not None:
+        fields['Distance'] = float(distance)
     fields['ActivityName'] = activity_type
     fields['Activity_ID'] = activityID
 
@@ -1306,7 +1310,7 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                     # Extract Stryd footpod metrics written by the Stryd Connect IQ data field
                     if stryd_indices:
                         stryd_point = _build_stryd_point(
-                            stryd_records, stryd_session,
+                            stryd_records, stryd_session, all_sessions_list,
                             activityID, activity_type, activity_start_time
                         )
                         if stryd_point:
