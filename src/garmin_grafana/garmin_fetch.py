@@ -1055,6 +1055,11 @@ def _running_dynamics_lap_fields(lap):
     }
 
 
+RUNNING_DYNAMICS_AVERAGES = {
+    'avg_vertical_oscillation', 'avg_vertical_ratio', 'avg_stance_time',
+    'avg_stance_time_balance', 'avg_stance_time_percent', 'avg_step_length',
+}
+
 def _build_running_dynamics_point(all_records_list, all_sessions_list, activityID, activity_type, activity_start_time):
     """Build one RunningDynamics point per activity: session averages plus min/max from the records."""
     def nonzero_values(records, key):
@@ -1110,8 +1115,9 @@ def _build_running_dynamics_point(all_records_list, all_sessions_list, activityI
             fields[f'min_{src}'] = float(min(vals))
             fields[f'max_{src}'] = float(max(vals))
 
-    # Guard: write nothing if the activity carries no running dynamics at all
-    if not fields:
+    # Guard: write nothing if the activity carries no running dynamics at all. Cadence and
+    # stride counts alone don't count: every ride with a cadence sensor has a cadence.
+    if not RUNNING_DYNAMICS_AVERAGES & fields.keys():
         return None
 
     fields['ActivityName'] = activity_type
