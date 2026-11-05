@@ -1,8 +1,9 @@
 # %%
 import traceback
 import re
-import base64, requests, time, pytz, logging, os, sys, dotenv, io, zipfile
+import base64, requests, time, pytz, logging, os, sys, dotenv, io, zipfile, uuid
 from fitparse import FitFile, FitParseError
+from fitparse.records import DevField
 from datetime import datetime, timedelta
 from influxdb import InfluxDBClient
 from influxdb.exceptions import InfluxDBClientError
@@ -59,7 +60,7 @@ MAX_CONSECUTIVE_500_ERRORS = int(os.getenv("MAX_CONSECUTIVE_500_ERRORS", 10)) # 
 INFLUXDB_ENDPOINT_IS_HTTP = False if os.getenv("INFLUXDB_ENDPOINT_IS_HTTP") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional
 GARMIN_DEVICENAME_AUTOMATIC = False if GARMIN_DEVICENAME != "Unknown" else True # optional
 UPDATE_INTERVAL_SECONDS = int(os.getenv("UPDATE_INTERVAL_SECONDS", 300)) # optional
-FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,fitness_age,vo2,activity,race_prediction,body_composition,lifestyle") # additional available values are lactate_threshold,training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration,solar_intensity,cycling_dynamics which you can add to the list seperated by , without any space
+FETCH_SELECTION = os.getenv("FETCH_SELECTION", "daily_avg,sleep,steps,heartrate,stress,breathing,hrv,fitness_age,vo2,activity,race_prediction,body_composition,lifestyle") # additional available values are lactate_threshold,training_status,training_readiness,hill_score,endurance_score,blood_pressure,hydration,solar_intensity,cycling_dynamics,stryd which you can add to the list seperated by , without any space
 ACTIVITY_TYPE_FILTER = [t.strip().lower() for t in os.getenv("ACTIVITY_TYPE_FILTER", "").split(",") if t.strip()] # optional, comma-separated list of activity typeKeys to import only specific activity types. Leave empty to import all. Known typeKeys: running,treadmill_running,indoor_running,cycling,indoor_cycling,road_biking,mountain_biking,walking,hiking,mountaineering,strength_training,hiit,indoor_cardio,elliptical,lap_swimming,open_water_swimming,rock_climbing,indoor_climbing,tennis_v2,kayaking_v2,boating_v2,multi_sport,other
 LACTATE_THRESHOLD_SPORTS = os.getenv("LACTATE_THRESHOLD_SPORTS", "RUNNING").upper().split(",") # Garmin currently implements RUNNING, but has provisions for CYCLING, and SWIMMING
 KEEP_FIT_FILES = True if os.getenv("KEEP_FIT_FILES") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional
@@ -1026,6 +1027,104 @@ def _build_cycling_dynamics_point(all_records_list, all_sessions_list, activityI
     }
 
 # %%
+# Stryd footpod metrics. The Stryd Connect IQ data field writes them as FIT developer fields
+# into the watch's own activity file, so they arrive with the regular FIT download (no Stryd
+# account or API involved). Fields are matched on that app's Connect IQ application ID: other
+# Connect IQ apps also write fields named e.g. "Power", and those must not be mistaken for Stryd's.
+STRYD_CIQ_APP_ID = "18fb2cf0-1a4b-430d-ad66-988c847421f4"
+STRYD_RECORD_FIELDS = { # developer field name -> ActivityGPS field
+    'Power': 'Stryd_Power', # W
+    'Form Power': 'Stryd_Form_Power', # W
+    'Air Power': 'Stryd_Air_Power', # W
+    'Leg Spring Stiffness': 'Stryd_Leg_Spring_Stiffness', # kN/m
+    'Leg Spring Stiffness Balance': 'Stryd_Leg_Spring_Stiffness_Balance', # %
+    'Impact Loading Rate': 'Stryd_Impact_Loading_Rate', # body weight/s
+    'Impact Loading Rate Balance': 'Stryd_Impact_Loading_Rate_Balance', # %
+    'Vertical Oscillation Balance': 'Stryd_Vertical_Oscillation_Balance', # %
+    'Stryd Temperature': 'Stryd_Temperature', # degrees C
+    'Stryd Humidity': 'Stryd_Humidity', # %
+}
+STRYD_LAP_FIELDS = { # developer field name -> ActivityLap field
+    'Lap Power': 'Stryd_Lap_Power', # W
+}
+STRYD_SESSION_FIELDS = { # developer field name -> StrydMetrics field
+    'CP': 'Critical_Power', # W, the Critical Power configured in Stryd at the time of the activity
+    'Weight': 'Weight', # kg, as configured in Stryd
+    'Baseline Temperature': 'Baseline_Temperature', # degrees C
+    'Baseline Humidity': 'Baseline_Humidity', # %
+    'Baseline Elevation': 'Baseline_Elevation', # m
+}
+
+def _stryd_dev_data_indices(fitfile):
+    """Developer data indices that belong to the Stryd Connect IQ data field in this FIT file."""
+    indices = set()
+    for message in fitfile.get_messages('developer_data_id'):
+        application_id = message.get_value('application_id')
+        try:
+            if application_id is not None and str(uuid.UUID(bytes=bytes(application_id))) == STRYD_CIQ_APP_ID:
+                indices.add(message.get_value('developer_data_index'))
+        except (TypeError, ValueError):
+            continue
+    return indices
+
+def _stryd_values(message, stryd_indices, field_map):
+    """Stryd developer fields of one FIT message, renamed with field_map."""
+    values = {}
+    for field_data in message.fields:
+        field = field_data.field
+        if isinstance(field, DevField) and field.dev_data_index in stryd_indices and field.name in field_map:
+            try:
+                values[field_map[field.name]] = float(field_data.value)
+            except (TypeError, ValueError):
+                continue
+    return values
+
+def _build_stryd_point(stryd_records, stryd_session, activityID, activity_type, activity_start_time):
+    """One StrydMetrics point per activity: session values plus averages of the per-second data."""
+    fields = dict(stryd_session)
+
+    def average(key, skip_zero=False):
+        vals = [r[key] for r in stryd_records if key in r and not (skip_zero and r[key] == 0)]
+        return sum(vals) / len(vals) if vals else None
+
+    # Power is 0 while standing still, so averages exclude those seconds (like a moving average)
+    for key, dst, skip_zero in [
+        ('Stryd_Power',                        'Avg_Power',                        True),
+        ('Stryd_Form_Power',                   'Avg_Form_Power',                   True),
+        ('Stryd_Air_Power',                    'Avg_Air_Power',                    False),
+        ('Stryd_Leg_Spring_Stiffness',         'Avg_Leg_Spring_Stiffness',         True),
+        ('Stryd_Leg_Spring_Stiffness_Balance', 'Avg_Leg_Spring_Stiffness_Balance', True),
+        ('Stryd_Impact_Loading_Rate',          'Avg_Impact_Loading_Rate',          True),
+        ('Stryd_Impact_Loading_Rate_Balance',  'Avg_Impact_Loading_Rate_Balance',  True),
+        ('Stryd_Vertical_Oscillation_Balance', 'Avg_Vertical_Oscillation_Balance', True),
+    ]:
+        v = average(key, skip_zero)
+        if v is not None:
+            fields[dst] = v
+    powers = [r['Stryd_Power'] for r in stryd_records if 'Stryd_Power' in r]
+    if powers:
+        fields['Max_Power'] = max(powers)
+
+    # Guard: write nothing if the activity has no Stryd data
+    if not fields:
+        return None
+
+    fields['ActivityName'] = activity_type
+    fields['Activity_ID'] = activityID
+
+    return {
+        "measurement": "StrydMetrics",
+        "time": activity_start_time.isoformat(),
+        "tags": {
+            "Device": GARMIN_DEVICENAME,
+            "Database_Name": INFLUXDB_DATABASE,
+            "ActivityID": activityID,
+            "ActivitySelector": activity_start_time.strftime('%Y%m%dT%H%M%SUTC-') + activity_type
+        },
+        "fields": fields
+    }
+
+# %%
 def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back to TCX
     points_list = []
     for activityID in activityIDdict.keys():
@@ -1052,11 +1151,16 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                     all_sessions_list = [record.get_values() for record in fitfile.get_messages('session')]
                     all_lengths_list = [record.get_values() for record in fitfile.get_messages('length')]
                     all_laps_list = [record.get_values() for record in fitfile.get_messages('lap')]
+                    stryd_indices = _stryd_dev_data_indices(fitfile) if 'stryd' in FETCH_SELECTION else set()
+                    if stryd_indices: # lists aligned with all_records_list / all_laps_list
+                        stryd_records = [_stryd_values(m, stryd_indices, STRYD_RECORD_FIELDS) for m in fitfile.get_messages('record')]
+                        stryd_laps = [_stryd_values(m, stryd_indices, STRYD_LAP_FIELDS) for m in fitfile.get_messages('lap')]
+                        stryd_session = next((_stryd_values(m, stryd_indices, STRYD_SESSION_FIELDS) for m in fitfile.get_messages('session')), {})
                     if len(all_records_list) == 0:
                         raise FileNotFoundError(f"No records found in FIT file for Activity ID {activityID} - Discarding FIT file")
                     else:
                         activity_start_time = all_records_list[0]['timestamp'].replace(tzinfo=pytz.UTC)
-                    for parsed_record in all_records_list:
+                    for record_index, parsed_record in enumerate(all_records_list):
                         if parsed_record.get('timestamp'):
                             point = {
                                 "measurement": "ActivityGPS",
@@ -1090,6 +1194,8 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "Step_Length": parsed_record.get('step_length', None)
                                 }
                             }
+                            if stryd_indices:
+                                point["fields"].update(stryd_records[record_index])
                             points_list.append(point)
                     for session_record in all_sessions_list:
                         if session_record.get('start_time') or session_record.get('timestamp'):
@@ -1144,7 +1250,7 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                 }
                             }
                             points_list.append(point)
-                    for lap_record in all_laps_list:
+                    for lap_message_index, lap_record in enumerate(all_laps_list):
                         if lap_record.get('start_time') or lap_record.get('timestamp'):
                             point = {
                                 "measurement": "ActivityLap",
@@ -1184,6 +1290,8 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                                     "Avg_Step_Length": lap_record.get('avg_step_length', None)
                                 }
                             }
+                            if stryd_indices:
+                                point["fields"].update(stryd_laps[lap_message_index])
                             points_list.append(point)
                     # Extract cycling dynamics and advanced power metrics
                     if 'cycling_dynamics' in FETCH_SELECTION:
@@ -1194,6 +1302,16 @@ def fetch_activity_GPS(activityIDdict): # Uses FIT file by default, falls back t
                         if cycling_point:
                             points_list.append(cycling_point)
                             logging.info(f"Activity ID {activityID}: CyclingDynamics point added ({len(cycling_point['fields']) - 2} metrics)")
+
+                    # Extract Stryd footpod metrics written by the Stryd Connect IQ data field
+                    if stryd_indices:
+                        stryd_point = _build_stryd_point(
+                            stryd_records, stryd_session,
+                            activityID, activity_type, activity_start_time
+                        )
+                        if stryd_point:
+                            points_list.append(stryd_point)
+                            logging.info(f"Activity ID {activityID}: StrydMetrics point added ({len(stryd_point['fields']) - 2} metrics)")
 
                     if KEEP_FIT_FILES:
                         os.makedirs(FIT_FILE_STORAGE_LOCATION, exist_ok=True)
