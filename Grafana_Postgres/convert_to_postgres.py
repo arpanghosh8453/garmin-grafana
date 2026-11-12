@@ -45,7 +45,10 @@ RAW = {
 # Strength Training dashboard: hand translations by (panel title, refId); its InfluxQL is all raw.
 SETS = '"StrengthExerciseSet"'
 WORKING = ('"Weight_kg" > 0 AND "ExerciseLabel" <> \'ROW/INDOOR_ROW\' AND "ExerciseCategory" <> \'RUN\' AND $__timeFilter(time)')
-CATEGORY, LABEL = ' AND "ExerciseCategory" IN ($ExerciseCategory)', ' AND "ExerciseLabel" IN ($ExerciseLabel)'
+# = ANY(ARRAY[...]) rather than IN (...): with no strength sets the variables are empty, and IN () is a
+# syntax error where InfluxDB's =~ /^$ExerciseCategory$/ just matches nothing.
+CATEGORY, LABEL = (' AND "ExerciseCategory" = ANY(ARRAY[$ExerciseCategory]::text[])',
+                   ' AND "ExerciseLabel" = ANY(ARRAY[$ExerciseLabel]::text[])')
 VOLUME, EPLEY = '"Reps" * "Weight_kg"', '"Weight_kg" * (1 + "Reps" / 30.0)'
 # GROUP BY time(1d) without tz(): UTC days. (Not $__timeGroup: it returns epoch numbers, which can't be grouped again.)
 DAY = "date_bin('1 day', time, TIMESTAMPTZ '1970-01-01 00:00:00+00')"
@@ -105,7 +108,7 @@ RAW_TABLES = {
 # Dashboard variables whose InfluxQL can't be translated by the SHOW TAG VALUES pattern alone.
 RAW_VARIABLES = {
     'SHOW TAG VALUES FROM "StrengthExerciseSet" WITH KEY = "ExerciseLabel" WHERE ExerciseCategory =~ /^$ExerciseCategory$/':
-        'SELECT DISTINCT "ExerciseLabel" FROM "StrengthExerciseSet" WHERE "ExerciseCategory" IN ($ExerciseCategory) ORDER BY 1',
+        'SELECT DISTINCT "ExerciseLabel" FROM "StrengthExerciseSet" WHERE "ExerciseCategory" = ANY(ARRAY[$ExerciseCategory]::text[]) ORDER BY 1',
 }
 
 

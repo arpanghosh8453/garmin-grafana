@@ -470,7 +470,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(time, '1d'), \"ExerciseLabel\" AS metric, max(\"Weight_kg\" * (1 + \"Reps\" / 30.0)) AS e1rm FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" IN ($ExerciseCategory) AND \"ExerciseLabel\" IN ($ExerciseLabel) GROUP BY 1, 2 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(time, '1d'), \"ExerciseLabel\" AS metric, max(\"Weight_kg\" * (1 + \"Reps\" / 30.0)) AS e1rm FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" = ANY(ARRAY[$ExerciseCategory]::text[]) AND \"ExerciseLabel\" = ANY(ARRAY[$ExerciseLabel]::text[]) GROUP BY 1, 2 ORDER BY 1"
         }
       ],
       "title": "Estimated 1RM Progression (Epley) by Exercise",
@@ -714,7 +714,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"Time\", \"ExerciseLabel\", max(\"Weight_kg\") AS \"Max Weight (kg)\", max(\"Weight_kg\" * (1 + \"Reps\" / 30.0)) AS \"Best Est. 1RM (kg)\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" IN ($ExerciseCategory) AND \"ExerciseLabel\" IN ($ExerciseLabel) GROUP BY 2 ORDER BY 2"
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"Time\", \"ExerciseLabel\", max(\"Weight_kg\") AS \"Max Weight (kg)\", max(\"Weight_kg\" * (1 + \"Reps\" / 30.0)) AS \"Best Est. 1RM (kg)\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" = ANY(ARRAY[$ExerciseCategory]::text[]) AND \"ExerciseLabel\" = ANY(ARRAY[$ExerciseLabel]::text[]) GROUP BY 2 ORDER BY 2"
         }
       ],
       "title": "Personal Records (Top Set & Est. 1RM)",
@@ -813,7 +813,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"time\", \"ExerciseCategory\" AS metric, sum(\"Reps\" * \"Weight_kg\") AS \"Volume\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" IN ($ExerciseCategory) GROUP BY 2 ORDER BY 2"
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"time\", \"ExerciseCategory\" AS metric, sum(\"Reps\" * \"Weight_kg\") AS \"Volume\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" = ANY(ARRAY[$ExerciseCategory]::text[]) GROUP BY 2 ORDER BY 2"
         }
       ],
       "title": "Volume by Category",
@@ -909,7 +909,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"Time\", \"ExerciseCategory\", count(\"Reps\") AS \"Sets\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" IN ($ExerciseCategory) GROUP BY 2 ORDER BY 2"
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"Time\", \"ExerciseCategory\", count(\"Reps\") AS \"Sets\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" = ANY(ARRAY[$ExerciseCategory]::text[]) GROUP BY 2 ORDER BY 2"
         }
       ],
       "title": "Sets by Category",
@@ -1076,7 +1076,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT time AS \"Time\", \"ExerciseLabel\" AS \"Exercise\", \"Reps\", \"Weight_kg\" AS \"Weight (kg)\", \"Reps\" * \"Weight_kg\" AS \"Volume (kg)\", \"SetOrder\" AS \"Set #\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" IN ($ExerciseCategory) AND \"ExerciseLabel\" IN ($ExerciseLabel) ORDER BY time DESC LIMIT 100"
+          "rawSql": "SELECT time AS \"Time\", \"ExerciseLabel\" AS \"Exercise\", \"Reps\", \"Weight_kg\" AS \"Weight (kg)\", \"Reps\" * \"Weight_kg\" AS \"Volume (kg)\", \"SetOrder\" AS \"Set #\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" = ANY(ARRAY[$ExerciseCategory]::text[]) AND \"ExerciseLabel\" = ANY(ARRAY[$ExerciseLabel]::text[]) ORDER BY time DESC LIMIT 100"
         }
       ],
       "title": "Recent Sets (Workout Detail)",
@@ -1430,7 +1430,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"Time\", \"ExerciseLabel\", sum(\"Duration_s\") AS \"Total Time Under Tension (s)\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" IN ($ExerciseCategory) AND \"ExerciseLabel\" IN ($ExerciseLabel) GROUP BY 2 ORDER BY 2"
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"Time\", \"ExerciseLabel\", sum(\"Duration_s\") AS \"Total Time Under Tension (s)\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" = ANY(ARRAY[$ExerciseCategory]::text[]) AND \"ExerciseLabel\" = ANY(ARRAY[$ExerciseLabel]::text[]) GROUP BY 2 ORDER BY 2"
         }
       ],
       "title": "Time Under Tension by Exercise",
@@ -1772,13 +1772,13 @@
           "type": "grafana-postgresql-datasource",
           "uid": "${DS_GARMIN_STATS_PG}"
         },
-        "definition": "SELECT DISTINCT \"ExerciseLabel\" FROM \"StrengthExerciseSet\" WHERE \"ExerciseCategory\" IN ($ExerciseCategory) ORDER BY 1",
+        "definition": "SELECT DISTINCT \"ExerciseLabel\" FROM \"StrengthExerciseSet\" WHERE \"ExerciseCategory\" = ANY(ARRAY[$ExerciseCategory]::text[]) ORDER BY 1",
         "includeAll": true,
         "multi": true,
         "name": "ExerciseLabel",
         "label": "Exercise",
         "options": [],
-        "query": "SELECT DISTINCT \"ExerciseLabel\" FROM \"StrengthExerciseSet\" WHERE \"ExerciseCategory\" IN ($ExerciseCategory) ORDER BY 1",
+        "query": "SELECT DISTINCT \"ExerciseLabel\" FROM \"StrengthExerciseSet\" WHERE \"ExerciseCategory\" = ANY(ARRAY[$ExerciseCategory]::text[]) ORDER BY 1",
         "refresh": 1,
         "regex": "",
         "sort": 1,
