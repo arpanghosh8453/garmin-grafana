@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - auth-fix
+    tags:
+      - 'v*'
     paths:
       - 'src/garmin_grafana/garmin_fetch.py'
       - 'src/garmin_grafana/influxdb_exporter.py'
@@ -56,7 +58,9 @@ jobs:
 
       - name: Resolve Image Tag From Branch
         run: |
-          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "IMAGE_TAG=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          elif [ "${GITHUB_REF_NAME}" = "main" ]; then
             echo "IMAGE_TAG=latest" >> "$GITHUB_ENV"
           else
             SAFE_TAG="${GITHUB_REF_NAME//\//-}"
