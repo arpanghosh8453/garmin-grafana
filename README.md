@@ -55,6 +55,15 @@ exercise balance, a set-level workout log, and HR zone time during strength sess
 
 ![Strength Training Dashboard](https://github.com/arpanghosh8453/garmin-grafana/blob/main/Grafana_Dashboard/Garmin-Strength-Training-Dashboard-Preview.png?raw=true)
 
+### Running Dashboard
+
+A dedicated dashboard for running, the counterpart of the strength one: run overview (distance,
+moving time, elevation, pace, heart rate), per-run trends, and the running-specific metrics that have
+no place on the generic dashboard — vertical oscillation, vertical ratio, ground contact time and
+balance, stride length and cadence — both as per-run averages and per second for the selected run,
+plus a per-lap table. It reads `ActivitySummary`, `ActivityGPS`, `ActivityLap` and `RunningDynamics`,
+and the dynamics panels light up once you enable `running_dynamics` in `FETCH_SELECTION`.
+
 ## Features
 
 - Automatic data collection from Garmin
@@ -172,6 +181,8 @@ sed -i '' 's/\${DS_GARMIN_STATS}/garmin_influxdb/g' Grafana_Dashboard/Garmin-Gra
 9. To use the Grafana dashboard with manual import, please use the [JSON file](https://github.com/arpanghosh8453/garmin-grafana/blob/main/Grafana_Dashboard/Garmin-Grafana-Dashboard.json) downloaded directly from GitHub or use the import code **23245** to pull them directly from the Grafana dashboard cloud. In the Grafana dashboard, the heatmap panels require an additional plugin that you must install. This can be done by using the `GF_PLUGINS_PREINSTALL=marcusolsson-hourly-heatmap-panel` environment variable like in the [compose-example.yml](./compose-example.yml) file, or after the creation of the container very easily with docker commands. Just run `docker exec -it grafana grafana cli plugins install marcusolsson-hourly-heatmap-panel` and then run `docker restart grafana` to apply that plugin update. Now, you should be able to see the Heatmap panels on the dashboard loading successfully.
 
 10. If you do strength training, you can additionally import the [Strength Training dashboard](https://github.com/arpanghosh8453/garmin-grafana/blob/main/Grafana_Dashboard/Garmin-Strength-Training-Dashboard.json). It uses only core Grafana panels (no extra plugins) and picks its InfluxDB data source from a dashboard dropdown, so it needs no `sed` substitution. It reads the `StrengthExerciseSet` and `StrengthHRZones` measurements, so it stays empty until you log a strength activity. Since strength data is sparse compared to daily metrics, its default time range is the last 6 months.
+
+11. If you run, you can import the [Running dashboard](https://github.com/arpanghosh8453/garmin-grafana/blob/main/Grafana_Dashboard/Garmin-Running-Dashboard.json) the same way. It also uses only core Grafana panels and picks its data source from a dropdown. It reads `ActivitySummary`, `ActivityGPS` and `ActivityLap`, so it works as soon as your runs are imported; the running-dynamics panels stay empty until you add `running_dynamics` to `FETCH_SELECTION` (see the additional configuration section below). Its `Run` dropdown only lists running activities.
 
 > [!NOTE]
 > When you run this for the first time, it will only automatically fetch the data for **last 7 days** only and keep pulling new data that syncs with Garmin Connect moving forward. In order to sync back older data, use the following command replacing the YYYY-MM-DD with appropriate start and end dates (MANUAL_START_DATE value must be older than MANUAL_END_DATE value)
