@@ -651,6 +651,20 @@ def get_body_composition(date_str):
     return points_list
 
 # %%
+def get_activity_event_type(activity):
+    """Return the Garmin Connect event type key of an activity (race, training, uncategorized...).
+
+    The activity list exposes it as {"typeId": 1, "typeKey": "race", ...}; a plain
+    string is accepted as is. Returns None when the activity carries no event type.
+    """
+    event_type = activity.get('eventType')
+    if isinstance(event_type, dict):
+        return event_type.get('typeKey')
+    if isinstance(event_type, str) and event_type:
+        return event_type
+    return None
+
+# %%
 def get_activity_summary(date_str):
     points_list = []
     activity_with_gps_id_dict = {}
@@ -697,6 +711,7 @@ def get_activity_summary(date_str):
                     'activityName': activity.get('activityName'),
                     'description': activity.get('description'),
                     'activityType': (activity.get('activityType') or {}).get('typeKey',None),
+                    'eventType': get_activity_event_type(activity),
                     'distance': activity.get('distance'),
                     'elevationGain': activity.get('elevationGain'),
                     'elevationLoss': activity.get('elevationLoss'),
