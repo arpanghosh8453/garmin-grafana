@@ -191,6 +191,70 @@ def _is_http_status_error(err, status_code):
     return re.search(rf"\b{status_code}\b", str(err)) is not None
 
 # %%
+_FIELD_TYPE_CONFLICT_RE = re.compile(
+    r'input field \\?"(?P<field>[^"\\]+)\\?" on measurement \\?"(?P<measurement>[^"\\]+)\\?" '
+    r'is type (?P<input_type>\w+), already exists as type (?P<existing_type>\w+)'
+)
+
+def _coerce_field_value(value, influx_type):
+    """Convert a field value to an InfluxDB 1.x field type (float, integer, string, boolean)."""
+    if influx_type == 'float':
+        return float(value)
+    if influx_type == 'integer':
+        return int(round(float(value)))
+    if influx_type == 'string':
+        return str(value)
+    if influx_type == 'boolean':
+        return bool(value)
+    raise ValueError(f"unknown InfluxDB field type {influx_type}")
+
+def write_points_v1_resolving_type_conflicts(points, max_attempts=20):
+    """Write points to InfluxDB 1.x, adapting values to the field types already stored.
+
+    InfluxDB 1.x fixes the type of a field per shard. When the code has changed a
+    field's Python type over time (e.g. hrTimeInZone_* from float to int), re-fetching
+    old dates hits a "field type conflict" and the whole point is dropped, including
+    any new field. On such a conflict, the field is converted to the type the shard
+    already holds and the chunk is written again (rewriting identical points is
+    idempotent). A chunk that spans shards with opposite types is split in halves.
+    """
+    seen_conflicts = set()
+    for _ in range(max_attempts):
+        try:
+            influxdbclient.write_points(points)
+            return
+        except InfluxDBClientError as err:
+            match = _FIELD_TYPE_CONFLICT_RE.search(str(err))
+            if not match:
+                raise
+            field, measurement = match.group('field'), match.group('measurement')
+            existing_type = match.group('existing_type')
+            conflict_key = (measurement, field)
+            if conflict_key in seen_conflicts:
+                if len(points) > 1:
+                    middle = len(points) // 2
+                    write_points_v1_resolving_type_conflicts(points[:middle], max_attempts)
+                    write_points_v1_resolving_type_conflicts(points[middle:], max_attempts)
+                    return
+                raise
+            seen_conflicts.add(conflict_key)
+            logging.warning(f"Field type conflict on {measurement}.{field}: writing it as {existing_type} (type already stored in InfluxDB)")
+            coerced_points = []
+            for point in points:
+                fields = point.get('fields') or {}
+                if point.get('measurement') == measurement and fields.get(field) is not None:
+                    fields = dict(fields)
+                    try:
+                        fields[field] = _coerce_field_value(fields[field], existing_type)
+                    except (TypeError, ValueError):
+                        logging.warning(f"Dropping {measurement}.{field}={fields[field]!r}: cannot convert it to {existing_type}")
+                        del fields[field]
+                    point = {**point, 'fields': fields}
+                coerced_points.append(point)
+            points = coerced_points
+    raise InfluxDBClientError(f"Too many field type conflicts while writing {len(points)} points")
+
+# %%
 def write_points_to_influxdb(points):
     write_chunk_size = 20000
     try:
@@ -201,7 +265,7 @@ def write_points_to_influxdb(points):
             # Write in chunks - Issue reported for large activities data containing >20000 points - Error 413 : payload too large
             for i in range(0, len(points), write_chunk_size):
                 if INFLUXDB_VERSION == '1':
-                    influxdbclient.write_points(points[i:i + write_chunk_size])
+                    write_points_v1_resolving_type_conflicts(points[i:i + write_chunk_size])
                 else:
                     influxdbclient.write(record=points[i:i + write_chunk_size])
             logging.info("Success : updated influxDB database with new points")
@@ -651,6 +715,20 @@ def get_body_composition(date_str):
     return points_list
 
 # %%
+def get_activity_event_type(activity):
+    """Return the Garmin Connect event type key of an activity (race, training, uncategorized...).
+
+    The activity list exposes it as {"typeId": 1, "typeKey": "race", ...}; a plain
+    string is accepted as is. Returns None when the activity carries no event type.
+    """
+    event_type = activity.get('eventType')
+    if isinstance(event_type, dict):
+        return event_type.get('typeKey')
+    if isinstance(event_type, str) and event_type:
+        return event_type
+    return None
+
+# %%
 def get_activity_summary(date_str):
     points_list = []
     activity_with_gps_id_dict = {}
@@ -697,6 +775,7 @@ def get_activity_summary(date_str):
                     'activityName': activity.get('activityName'),
                     'description': activity.get('description'),
                     'activityType': (activity.get('activityType') or {}).get('typeKey',None),
+                    'eventType': get_activity_event_type(activity),
                     'distance': activity.get('distance'),
                     'elevationGain': activity.get('elevationGain'),
                     'elevationLoss': activity.get('elevationLoss'),
