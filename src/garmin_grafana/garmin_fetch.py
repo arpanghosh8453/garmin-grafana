@@ -42,6 +42,15 @@ INFLUXDB_PASSWORD = os.getenv("INFLUXDB_PASSWORD", 'influxdb_access_password') #
 INFLUXDB_DATABASE = os.getenv("INFLUXDB_DATABASE", 'GarminStats') # Required
 INFLUXDB_V3_ACCESS_TOKEN = os.getenv("INFLUXDB_V3_ACCESS_TOKEN",'') # InfluxDB V3 Access token, required only for InfluxDB V3
 INFLUXDB_ORG = os.getenv("INFLUXDB_ORG", 'default') # required only for InfluxDB V3 
+DATABASE_BACKEND = os.getenv("DATABASE_BACKEND", "influxdb").lower() # optional, 'influxdb' (default, see INFLUXDB_VERSION) or 'postgres' (PostgreSQL, optionally TimescaleDB)
+assert DATABASE_BACKEND in ['influxdb', 'postgres'], "DATABASE_BACKEND must be either influxdb or postgres"
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", 'localhost') # required only for the postgres backend
+POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", 5432)) # required only for the postgres backend
+POSTGRES_USER = os.getenv("POSTGRES_USER", 'garmin') # required only for the postgres backend
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", '') # required only for the postgres backend
+POSTGRES_DATABASE = os.getenv("POSTGRES_DATABASE", 'garmin_stats') # required only for the postgres backend
+POSTGRES_SSLMODE = os.getenv("POSTGRES_SSLMODE", 'prefer') # optional, libpq sslmode (disable, prefer, require, verify-full)
+POSTGRES_TIMESCALE = True if os.getenv("POSTGRES_TIMESCALE") in ['True', 'true', 'TRUE','t', 'T', 'yes', 'Yes', 'YES', '1'] else False # optional, make tables TimescaleDB hypertables when the extension is available
 TOKEN_DIR = os.getenv("TOKEN_DIR", "~/.garminconnect") # optional
 GARMINCONNECT_EMAIL = (os.environ.get("GARMINCONNECT_EMAIL") or "").strip() or None # optional, asks in prompt on run if not provided
 _garmin_pw_b64 = os.getenv("GARMINCONNECT_BASE64_PASSWORD")
@@ -86,8 +95,21 @@ logging.basicConfig(
 )
 
 # %%
+DATABASE_ERRORS = (InfluxDBClientError, InfluxDBError)
+if DATABASE_BACKEND == 'postgres':
+    import psycopg
+    try:
+        from .postgres_backend import PostgresClient
+    except ImportError: # run as a script (python garmin_grafana/garmin_fetch.py)
+        from postgres_backend import PostgresClient
+    DATABASE_ERRORS = (InfluxDBClientError, InfluxDBError, psycopg.Error)
+
 try:
-    if INFLUXDB_ENDPOINT_IS_HTTP:
+    if DATABASE_BACKEND == 'postgres':
+        influxdbclient = PostgresClient(host=POSTGRES_HOST, port=POSTGRES_PORT, user=POSTGRES_USER, password=POSTGRES_PASSWORD,
+                                        database=POSTGRES_DATABASE, sslmode=POSTGRES_SSLMODE, timescale=POSTGRES_TIMESCALE)
+        influxdbclient.ensure_tables() # Tables the dashboards query, so panels for data this account doesn't have show "No data", not an error
+    elif INFLUXDB_ENDPOINT_IS_HTTP:
         if INFLUXDB_VERSION == '1':
             influxdbclient = InfluxDBClient(host=INFLUXDB_HOST, port=INFLUXDB_PORT, username=INFLUXDB_USERNAME, password=INFLUXDB_PASSWORD)
             influxdbclient.switch_database(INFLUXDB_DATABASE)
@@ -116,12 +138,12 @@ try:
     'fields': {'DemoField': 0}
      }
     # The following code block tests the connection by writing/overwriting a demo point. raises error and aborts if connection fails. 
-    if INFLUXDB_VERSION == '1':
+    if DATABASE_BACKEND == 'postgres' or INFLUXDB_VERSION == '1':
         influxdbclient.write_points([demo_point])
     else:
         influxdbclient.write(record=[demo_point])
-except (InfluxDBClientError, InfluxDBError) as err:
-    logging.error("Unable to connect with influxdb database! Aborted")
+except DATABASE_ERRORS as err:
+    logging.error(f"Unable to connect with the {DATABASE_BACKEND} database! Aborted")
     raise InfluxDBClientError("InfluxDB connection failed:" + str(err))
 
 # %%
@@ -191,7 +213,10 @@ def _is_http_status_error(err, status_code):
     return re.search(rf"\b{status_code}\b", str(err)) is not None
 
 # %%
+database_write_failures = 0 # failed writes so far, so the update loop can fetch the same dates again (postgres backend)
+
 def write_points_to_influxdb(points):
+    global database_write_failures
     write_chunk_size = 20000
     try:
         if len(points) != 0:
@@ -200,12 +225,13 @@ def write_points_to_influxdb(points):
                     item['tags'].update({'User_ID': garmin_obj.display_name or 'Unknown'})
             # Write in chunks - Issue reported for large activities data containing >20000 points - Error 413 : payload too large
             for i in range(0, len(points), write_chunk_size):
-                if INFLUXDB_VERSION == '1':
+                if DATABASE_BACKEND == 'postgres' or INFLUXDB_VERSION == '1':
                     influxdbclient.write_points(points[i:i + write_chunk_size])
                 else:
                     influxdbclient.write(record=points[i:i + write_chunk_size])
-            logging.info("Success : updated influxDB database with new points")
-    except (InfluxDBClientError, InfluxDBError) as err:
+            logging.info(f"Success : updated {DATABASE_BACKEND} database with new points")
+    except DATABASE_ERRORS as err:
+        database_write_failures += 1
         logging.error("Write failed : Unable to connect with database! " + str(err))
 
 # %%
@@ -757,7 +783,7 @@ def purge_existing_strength_exercise_sets(activity_id):
     previous series first, InfluxDB keeps the stale and corrected rows in
     parallel because the tags no longer match.
     """
-    if INFLUXDB_VERSION != '1':
+    if DATABASE_BACKEND == 'influxdb' and INFLUXDB_VERSION != '1':
         logging.warning(
             f"InfluxDB version {INFLUXDB_VERSION} does not support purging StrengthExerciseSet series for activity {activity_id}. "
             "Applying the default refresh behavior; edited exercises may produce duplicated rows."
@@ -778,7 +804,7 @@ def purge_existing_strength_exercise_sets(activity_id):
         )
         logging.info(f"Purged existing StrengthExerciseSet series for activity {activity_id}")
         return True
-    except (InfluxDBClientError, InfluxDBError) as err:
+    except DATABASE_ERRORS as err:
         logging.warning(
             f"Failed to purge existing StrengthExerciseSet series for activity {activity_id}: {err}"
         )
@@ -1776,7 +1802,9 @@ if __name__ == "__main__":
         exit(0)
     else:
         try:
-            if INFLUXDB_VERSION == "1":
+            if DATABASE_BACKEND == 'postgres':
+                last_influxdb_sync_time_UTC = influxdbclient.last_time("HeartRateIntraday").astimezone(pytz.utc)
+            elif INFLUXDB_VERSION == "1":
                 last_influxdb_sync_time_UTC = pytz.utc.localize(datetime.strptime(list(influxdbclient.query(f"SELECT * FROM HeartRateIntraday ORDER BY time DESC LIMIT 1").get_points())[0]['time'],"%Y-%m-%dT%H:%M:%SZ"))
             else:
                 last_influxdb_sync_time_UTC = pytz.utc.localize(influxdbclient.query(query="SELECT * FROM HeartRateIntraday ORDER BY time DESC LIMIT 1", language="influxql").to_pylist()[0]['time'])
@@ -1802,8 +1830,12 @@ if __name__ == "__main__":
             last_watch_sync_time_UTC = datetime.fromtimestamp(int(garmin_obj.get_device_last_used().get('lastUsedDeviceUploadTime')/1000)).astimezone(pytz.timezone("UTC"))
             if last_influxdb_sync_time_UTC < last_watch_sync_time_UTC:
                 logging.info(f"Update found : Current watch sync time is {last_watch_sync_time_UTC} UTC")
+                failures_before = database_write_failures
                 fetch_write_bulk((last_influxdb_sync_time_UTC + local_timediff).strftime('%Y-%m-%d'), (last_watch_sync_time_UTC + local_timediff).strftime('%Y-%m-%d')) # Using local dates for deciding which dates to fetch in current iteration (see issue #25)
-                last_influxdb_sync_time_UTC = last_watch_sync_time_UTC
+                if DATABASE_BACKEND == 'postgres' and database_write_failures > failures_before:
+                    logging.warning("Some database writes failed : fetching the same dates again on the next update")
+                else:
+                    last_influxdb_sync_time_UTC = last_watch_sync_time_UTC
             else:
                 logging.info(f"No new data found : Current watch and influxdb sync time is {last_watch_sync_time_UTC} UTC")
             logging.info(f"waiting for {UPDATE_INTERVAL_SECONDS} seconds before next automatic update calls")

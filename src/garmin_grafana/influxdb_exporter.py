@@ -8,7 +8,7 @@ import pandas as pd
 from datetime import datetime, timedelta, timezone
 
 
-parser = argparse.ArgumentParser(description="Export InfluxDB measurements to individual CSVs in a ZIP archive")
+parser = argparse.ArgumentParser(description="Export InfluxDB (or PostgreSQL, with DATABASE_BACKEND=postgres) measurements to individual CSVs in a ZIP archive")
 parser.add_argument("--last-n-days", type=int, default=None, help="Query data from the last N days (overrides date range)")
 parser.add_argument("--start-date", type=str, default=None, help="Start date in YYYY-MM-DD")
 parser.add_argument("--end-date", type=str, default=None, help="End date in YYYY-MM-DD (defaults to today)")
@@ -49,9 +49,18 @@ INFLUXDB_PASSWORD = os.getenv("INFLUXDB_PASSWORD", "influxdb_access_password")
 INFLUXDB_DATABASE = os.getenv("INFLUXDB_DATABASE", "GarminStats")
 INFLUXDB_V3_ACCESS_TOKEN = os.getenv("INFLUXDB_V3_ACCESS_TOKEN",'') # InfluxDB V3 Access token, required only for InfluxDB V3
 INFLUXDB_ENDPOINT_IS_HTTP = False if os.getenv("INFLUXDB_ENDPOINT_IS_HTTP") in ['False','false','FALSE','f','F','no','No','NO','0'] else True # optional
+DATABASE_BACKEND = os.getenv("DATABASE_BACKEND", "influxdb").lower() # 'influxdb' or 'postgres' (same variables as garmin_fetch.py)
 
 
-if INFLUXDB_ENDPOINT_IS_HTTP:
+if DATABASE_BACKEND == 'postgres':
+    try:
+        from .postgres_backend import PostgresClient
+    except ImportError: # run as a script
+        from postgres_backend import PostgresClient
+    pgclient = PostgresClient(host=os.getenv("POSTGRES_HOST", "localhost"), port=int(os.getenv("POSTGRES_PORT", 5432)),
+                              user=os.getenv("POSTGRES_USER", "garmin"), password=os.getenv("POSTGRES_PASSWORD", ""),
+                              database=os.getenv("POSTGRES_DATABASE", "garmin_stats"), sslmode=os.getenv("POSTGRES_SSLMODE", "prefer"))
+elif INFLUXDB_ENDPOINT_IS_HTTP:
     if INFLUXDB_VERSION == '1':
         influxdbclient = InfluxDBClient(host=INFLUXDB_HOST, port=INFLUXDB_PORT, username=INFLUXDB_USERNAME, password=INFLUXDB_PASSWORD)
         influxdbclient.switch_database(INFLUXDB_DATABASE)
@@ -75,13 +84,41 @@ else:
 # --- Measurement exclusion list ---
 excluded_measurements = {"%", "DemoPoint", "DeviceSync"}
 
+def rfc3339(t):
+    """Times as the InfluxDB client gives them: UTC, whole seconds bare, otherwise microseconds."""
+    t = t.astimezone(timezone.utc)
+    return t.strftime("%Y-%m-%dT%H:%M:%S") + (f".{t.microsecond:06d}" if t.microsecond else "") + "Z"
+
+
+def postgres_points(measurement):
+    """Rows like InfluxDB's SELECT * gives them: time first, then every column in name order, tags a
+    point doesn't have left empty, and rows without any field value (only tags) left out."""
+    tags, fields = pgclient.schema(measurement)
+    if not fields:
+        return []
+    columns = sorted(tags + fields)
+    quoted = [f'"{c}"' for c in columns]
+    has_value = ", ".join(f'"{f}"' for f in fields)
+    rows = pgclient.conn.execute(
+        f'SELECT time, {", ".join(quoted)} FROM "{measurement}" '
+        f'WHERE time >= %s AND time <= %s AND num_nonnulls({has_value}) > 0 ORDER BY time',
+        (start_time, end_time)).fetchall()
+    return [{"time": rfc3339(r[0]), **{c: (None if c in tags and v == "" else v) for c, v in zip(columns, r[1:])}}
+            for r in rows]
+
+
 # --- Fetch all measurements ---
 measurements_query = "SHOW MEASUREMENTS"
-if INFLUXDB_VERSION == "1":
-    measurements_result = influxdbclient.query(measurements_query)
+if DATABASE_BACKEND == "postgres":
+    measurements = [r[0] for r in pgclient.conn.execute(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema() "
+        "AND table_type = 'BASE TABLE' ORDER BY 1").fetchall()]
 else:
-    measurements_result = influxdbclient.query(measurements_query, language="influxql")
-measurements = [m["name"] for m in measurements_result.get_points()]
+    if INFLUXDB_VERSION == "1":
+        measurements_result = influxdbclient.query(measurements_query)
+    else:
+        measurements_result = influxdbclient.query(measurements_query, language="influxql")
+    measurements = [m["name"] for m in measurements_result.get_points()]
 
 print(f"Found {len(measurements)} measurements. Skipping: {excluded_measurements}")
 
@@ -98,11 +135,12 @@ with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
 
         try:
             
-            if INFLUXDB_VERSION == "1":
-                result = influxdbclient.query(query)
+            if DATABASE_BACKEND == "postgres":
+                points = postgres_points(measurement)
+            elif INFLUXDB_VERSION == "1":
+                points = list(influxdbclient.query(query).get_points())
             else:
-                result = influxdbclient.query(query, language="influxql")
-            points = list(result.get_points())
+                points = list(influxdbclient.query(query, language="influxql").get_points())
 
             if not points:
                 print(" -- ⚠️ No data within given period.")

@@ -1,4 +1,5 @@
 # There is support for influxdb v3 (core) OSS, but it's highly recommended to use Influxdb 1.x versions with this project. 
+# PostgreSQL (optional) can be used instead of InfluxDB : uncomment the lines marked (PostgreSQL) and comment out the InfluxDB ones they replace - see docs/postgres-backend.md
 
 services:
   garmin-fetch-data:
@@ -8,6 +9,7 @@ services:
     # user: root # Runs the container as root user, uncomment this line if you are getting permission issues which can't be resolved otherwise. For this, you also need to change the below volume mount from './garminconnect-tokens:/home/appuser/.garminconnect' to './garminconnect-tokens:/root/.garminconnect' to ensure the token files persist during container rebuilding. 
     depends_on:
       - influxdb
+      # - postgres # (PostgreSQL) instead of influxdb
     volumes:
       - ./garminconnect-tokens:/home/appuser/.garminconnect # (persistent tokens storage - garminconnect-tokens folder must be owned by 1000:1000) - should be './garminconnect-tokens:/root/.garminconnect' instead if you are using using user: root
     environment:
@@ -25,6 +27,17 @@ services:
       #####################################################################################
       # - INFLUXDB_VERSION=1 # Required for influxdb V3, Default is 1, must be overridden with 3 if using Influxdb V3
       # - INFLUXDB_V3_ACCESS_TOKEN=your_influxdb_admin_access_token # Required for influxdb V3 (ignored for V1), Set this to your admin access token (or a token that has database R/W access) - You can generate this by following step 3 notes in the README installation
+      #####################################################################################
+      # The following ENV variables are required only if you are using PostgreSQL instead of InfluxDB (the INFLUXDB_* ones above are then ignored)
+      #####################################################################################
+      # - DATABASE_BACKEND=postgres # (PostgreSQL) Default is influxdb
+      # - POSTGRES_HOST=postgres # (PostgreSQL)
+      # - POSTGRES_PORT=5432 # (PostgreSQL)
+      # - POSTGRES_USER=garmin # (PostgreSQL)
+      # - POSTGRES_PASSWORD=postgres_secret_password # (PostgreSQL)
+      # - POSTGRES_DATABASE=garmin_stats # (PostgreSQL)
+      # - POSTGRES_SSLMODE=prefer # (PostgreSQL) optional, libpq sslmode: disable, prefer, require, verify-full (use require or verify-full for a database across the internet)
+      # - POSTGRES_TIMESCALE=False # (PostgreSQL) optional, set to True to store each measurement as a TimescaleDB hypertable (needs the timescale/timescaledb image below)
       #####################################################################################
       # The following ENV variables will override some default settings. 
       # Please read the README guide before using them as they may change how the script behaves
@@ -62,6 +75,18 @@ services:
       - influxdb_data:/var/lib/influxdb # InfluxDB V3 bind mount should be set like - influxdb_data:/data if you set INFLUXDB3_DB_DIR=/data (instead of /var/lib/influxdb)
     image: 'influxdb:1.11' # You must change this to 'quay.io/influxdb/influxdb3-core:latest' for influxdb V3
 
+  # postgres: # (PostgreSQL) instead of the influxdb service above
+  #   restart: unless-stopped
+  #   container_name: postgres
+  #   hostname: postgres
+  #   environment:
+  #     - POSTGRES_USER=garmin
+  #     - POSTGRES_PASSWORD=postgres_secret_password
+  #     - POSTGRES_DB=garmin_stats
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   image: 'postgres:17' # or 'timescale/timescaledb:latest-pg17' with POSTGRES_TIMESCALE=True on garmin-fetch-data
+
   grafana:
     restart: unless-stopped
     container_name: grafana
@@ -81,10 +106,13 @@ services:
       - grafana_data:/var/lib/grafana
       - ./Grafana_Datasource:/etc/grafana/provisioning/datasources # (optional) Self provisioning influxdb datasource
       - ./Grafana_Dashboard:/etc/grafana/provisioning/dashboards # (optional) self provisioning grafana dashboard
+      # - ./Grafana_Postgres/datasource:/etc/grafana/provisioning/datasources # (PostgreSQL) instead of ./Grafana_Datasource above
+      # - ./Grafana_Postgres/dashboards:/etc/grafana/provisioning/dashboards # (PostgreSQL) instead of ./Grafana_Dashboard above
     ports:
       - '3000:3000'
     image: 'grafana/grafana:latest'
 
 volumes:
   influxdb_data:
+  # postgres_data: # (PostgreSQL)
   grafana_data:

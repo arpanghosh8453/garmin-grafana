@@ -1,0 +1,17 @@
+apiVersion: 1
+datasources:
+  - name: Garmin-PostgreSQL
+    uid: garmin_postgres
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: postgres:5432
+    user: garmin
+    isDefault: true
+    editable: true
+    secureJsonData:
+      password: postgres_secret_password
+    jsonData:
+      database: garmin_stats
+      sslmode: disable
+      postgresVersion: 1700
+      timescaledb: false

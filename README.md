@@ -25,6 +25,7 @@ A docker container to fetch data from Garmin servers and store the data in a loc
   - ADVANCED : [Manual step by step installation](#manual-install-with-docker-recommended-if-you-understand-linux-concepts) guide
   - SYNOLOGY : [Installation Guide](https://github.com/arpanghosh8453/garmin-grafana/discussions/107#discussion-8326104)
   - KUBERNETES : [Helm](./k8s/README.md) chart for Kubernetes. Try with minikube - [Makefile](./k8s/Makefile) for easy deployment.
+  - POSTGRESQL : [Use PostgreSQL instead of InfluxDB](#using-postgresql-instead-of-influxdb) (optional)
 - **How to**
   - How to [pull historic (old) data](#historical-data-fetching-bulk-update) (bulk update)?
   - How to [import from garmin connect local export files](#importing-from-garmin-connect-export)?
@@ -189,6 +190,10 @@ This project is made for InfluxDB 1.11, as Flux queries on influxDB 2.x can be p
 > [!IMPORTANT]
 > If you have an existing **InfluxDB v2.x** database and want to integrate that with this project, you can follow [this guide](https://github.com/arpanghosh8453/garmin-grafana/discussions/63#discussioncomment-13025100), although we officially do not support InfluxDB v2.x with this project. We have direct support for **InfluxDB v3.x**, but we do not actively encourage people to use that as it comes with paywalled features (InfluxDB v3.x OSS limits the data query time to 72 hours - long term queries are only available in enterprise and InfluxData cloud hosted instances) that are essential for long term data visualization. As we are interested in visualization of long term data trends, this limit defeats the purpose. Hence, we strongly recommend using InfluxDB 1.11.x (default settings) to our users as long as it's not discontinued from production.
 
+### Using PostgreSQL instead of InfluxDB
+
+You can store the data in PostgreSQL (or TimescaleDB) instead of InfluxDB. The compose example has the PostgreSQL options commented out (marked `(PostgreSQL)`): uncomment them and comment out the InfluxDB lines they replace. Grafana then provisions the dashboards in `Grafana_Postgres/`. The dashboards show the same panels and numbers. An existing InfluxDB 1.x or 3.x database can be copied over with one command. See [docs/postgres-backend.md](docs/postgres-backend.md) for setup, migration and details.
+
 ### Additional configuration and environment variables
 
 ✅ The Above compose file creates an open read/write access influxdb database with no authentication. Unless you expose this database to the open internet directly, this poses no threat. If you share your local network, you may enable authentication and grant appropriate read/write access to the influxdb_user on the GarminStats database manually if you want with `INFLUXDB_ADMIN_ENABLED`, `INFLUXDB_ADMIN_USER`, and `INFLUXDB_ADMIN_PASSWORD` ENV variables during the setup by following the [influxdb guide](https://github.com/docker-library/docs/blob/master/influxdb/README.md) but this won't be covered here for the sake of simplicity.
@@ -276,7 +281,7 @@ This project provides additional utilities to export the data as CSV for externa
 There are two ways to export the data into CSV files.
 
 1. Use the native CSV export functionality of Grafana, where you can export the data shown on any Grafana panel using [this guide](https://grafana.com/blog/2024/05/30/how-to-export-any-grafana-visualization-to-a-csv-file-microsoft-excel-or-google-sheets/) as CSV.
-2. If the above method is tedious and you want to grab all measurements in detail as CSV files with one command directly from the local InfluxDB database, a convenient exporter script is provided with this project (included inside the docker container).
+2. If the above method is tedious and you want to grab all measurements in detail as CSV files with one command directly from the local InfluxDB database, a convenient exporter script is provided with this project (included inside the docker container). It also works with the [PostgreSQL backend](#using-postgresql-instead-of-influxdb) (`DATABASE_BACKEND=postgres`).
 
    2.1 Simply run the following docker command from your terminal `docker exec garmin-fetch-data python /app/garmin_grafana/influxdb_exporter.py` to export the last 30 days data. The script takes additional arguments such as `last-n-days` or `start-date` and `end-date` if you want to export data for last n days or for a specific date range. You should run the command like
 

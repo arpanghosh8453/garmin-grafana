@@ -1,0 +1,1799 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1001,
+      "panels": [],
+      "title": "Overview",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GARMIN_STATS_PG}"
+      },
+      "description": "Sum of Reps x Weight_kg across all sets in range (Weight_kg>0 only; excludes cardio warmups).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue"
+              }
+            ]
+          },
+          "unit": "kg",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "id": 1002,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"time\", sum(\"Reps\" * \"Weight_kg\") AS \"Total Volume\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) HAVING count(\"Reps\" * \"Weight_kg\") > 0"
+        }
+      ],
+      "title": "Total Volume",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GARMIN_STATS_PG}"
+      },
+      "description": "Count of sets with Weight_kg > 0 in range. This excludes bodyweight/cardio-only entries (e.g. unweighted pull-ups, ROW/INDOOR_ROW warmups) that are logged inside strength activities but carry no load \u2014 so this number is lower than the raw row count for the same range. See 'Sets Needing Classification' below for data-quality flags.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue"
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "id": 1003,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"time\", count(\"Reps\") AS \"Weighted Sets\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) HAVING count(\"Reps\") > 0"
+        }
+      ],
+      "title": "Weighted Sets",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GARMIN_STATS_PG}"
+      },
+      "description": "Sum of reps across weighted sets in range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue"
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "id": 1004,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"time\", sum(\"Reps\") AS \"Total Reps\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) HAVING count(\"Reps\") > 0"
+        }
+      ],
+      "title": "Total Reps",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GARMIN_STATS_PG}"
+      },
+      "description": "Distinct days with at least one weighted set (one row per training day).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue"
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "id": 1005,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"time\", count(dvol) AS \"Workouts\" FROM (SELECT date_bin('1 day', time, TIMESTAMPTZ '1970-01-01 00:00:00+00') AS day, sum(\"Reps\" * \"Weight_kg\") AS dvol FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) GROUP BY 1) d HAVING count(dvol) > 0"
+        }
+      ],
+      "title": "Number of Workouts",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GARMIN_STATS_PG}"
+      },
+      "description": "Mean per-workout training volume in range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue"
+              }
+            ]
+          },
+          "unit": "kg",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 1
+      },
+      "id": 1006,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"time\", avg(dvol) AS \"Avg Volume\" FROM (SELECT date_bin('1 day', time, TIMESTAMPTZ '1970-01-01 00:00:00+00') AS day, sum(\"Reps\" * \"Weight_kg\") AS dvol FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) GROUP BY 1) d HAVING count(dvol) > 0"
+        }
+      ],
+      "title": "Avg Volume / Workout",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 1007,
+      "panels": [],
+      "title": "Progression & Volume",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GARMIN_STATS_PG}"
+      },
+      "description": "Best estimated 1-rep max per exercise per workout day, using the Epley formula Weight_kg * (1 + Reps/30). Filter by $ExerciseCategory / $ExerciseLabel above. This is the single most useful panel for tracking progressive overload.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 6,
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "kg"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "id": 1008,
+      "options": {
+        "legend": {
+          "calcs": [
+            "last",
+            "max"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeGroupAlias(time, '1d'), \"ExerciseLabel\" AS metric, max(\"Weight_kg\" * (1 + \"Reps\" / 30.0)) AS e1rm FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" = ANY(ARRAY[$ExerciseCategory]::text[]) AND \"ExerciseLabel\" = ANY(ARRAY[$ExerciseLabel]::text[]) GROUP BY 1, 2 ORDER BY 1"
+        }
+      ],
+      "title": "Estimated 1RM Progression (Epley) by Exercise",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GARMIN_STATS_PG}"
+      },
+      "description": "Total volume (kg) per workout day (Reps x Weight_kg, summed across all weighted sets that day).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "kg"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "id": 1009,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.7,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "never",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 100
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeGroupAlias(time, '1d'), sum(\"Reps\" * \"Weight_kg\") AS \"Volume\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) GROUP BY 1 ORDER BY 1"
+        }
+      ],
+      "title": "Training Volume per Workout",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GARMIN_STATS_PG}"
+      },
+      "description": "Heaviest single set and best estimated 1RM (Epley) per exercise in the selected range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max Weight (kg)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "kg"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlPu"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Best Est. 1RM (kg)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "kg"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlPu"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ExerciseLabel"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 340
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 1010,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Best Est. 1RM (kg)"
+          }
+        ]
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"Time\", \"ExerciseLabel\", max(\"Weight_kg\") AS \"Max Weight (kg)\", max(\"Weight_kg\" * (1 + \"Reps\" / 30.0)) AS \"Best Est. 1RM (kg)\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" = ANY(ARRAY[$ExerciseCategory]::text[]) AND \"ExerciseLabel\" = ANY(ARRAY[$ExerciseLabel]::text[]) GROUP BY 2 ORDER BY 2"
+        }
+      ],
+      "title": "Personal Records (Top Set & Est. 1RM)",
+      "type": "table",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {},
+            "renameByName": {}
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 1011,
+      "panels": [],
+      "title": "Exercise Balance & Workout Log",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GARMIN_STATS_PG}"
+      },
+      "description": "Training volume (kg) split by exercise category \u2014 shows muscle-group balance.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "unit": "kg"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 25
+      },
+      "id": 1012,
+      "options": {
+        "displayLabels": [
+          "percent"
+        ],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"time\", \"ExerciseCategory\" AS metric, sum(\"Reps\" * \"Weight_kg\") AS \"Volume\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" = ANY(ARRAY[$ExerciseCategory]::text[]) GROUP BY 2 ORDER BY 2"
+        }
+      ],
+      "title": "Volume by Category",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GARMIN_STATS_PG}"
+      },
+      "description": "Number of weighted sets per exercise category \u2014 complements the volume pie (a category can have many sets but low volume, or vice versa).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 16,
+        "x": 8,
+        "y": 25
+      },
+      "id": 1013,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.7,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "horizontal",
+        "showValue": "never",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 100,
+        "xField": "ExerciseCategory"
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"Time\", \"ExerciseCategory\", count(\"Reps\") AS \"Sets\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" = ANY(ARRAY[$ExerciseCategory]::text[]) GROUP BY 2 ORDER BY 2"
+        }
+      ],
+      "title": "Sets by Category",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GARMIN_STATS_PG}"
+      },
+      "description": "Most recent individual sets: exercise, reps, weight, and volume.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Weight (kg)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "kg"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Volume (kg)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "kg"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Exercise"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 380
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reps"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Set #"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "id": 1014,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Time"
+          }
+        ]
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT time AS \"Time\", \"ExerciseLabel\" AS \"Exercise\", \"Reps\", \"Weight_kg\" AS \"Weight (kg)\", \"Reps\" * \"Weight_kg\" AS \"Volume (kg)\", \"SetOrder\" AS \"Set #\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" = ANY(ARRAY[$ExerciseCategory]::text[]) AND \"ExerciseLabel\" = ANY(ARRAY[$ExerciseLabel]::text[]) ORDER BY time DESC LIMIT 100"
+        }
+      ],
+      "title": "Recent Sets (Workout Detail)",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GARMIN_STATS_PG}"
+      },
+      "description": "One row per workout day: total sets, reps, volume, and cumulative active set duration. Not filtered by exercise picker (whole-session view).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Volume (kg)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "kg"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time Under Tension (s)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "time:YYYY-MM-DD"
+              },
+              {
+                "id": "displayName",
+                "value": "Date"
+              },
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 43
+      },
+      "id": 1015,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Date"
+          }
+        ]
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT date_bin('1 day', time, TIMESTAMPTZ '1970-01-01 00:00:00+00') AS \"Time\", count(\"Reps\") AS \"Sets\", sum(\"Reps\") AS \"Reps\", sum(\"Reps\" * \"Weight_kg\") AS \"Volume (kg)\", sum(\"Duration_s\") AS \"Time Under Tension (s)\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) GROUP BY 1 ORDER BY 1"
+        }
+      ],
+      "title": "Workout Summary (per session)",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 51
+      },
+      "id": 1016,
+      "panels": [],
+      "title": "Heart Rate & Effort",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GARMIN_STATS_PG}"
+      },
+      "description": "Time spent in each heart-rate zone during strength sessions, from StrengthHRZones. ZoneNumber/ZoneLowBoundary are per-activity fields (not tags), so each zone is queried as a separate target filtered by ZoneNumber.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 16,
+        "w": 8,
+        "x": 0,
+        "y": 52
+      },
+      "id": 1017,
+      "options": {
+        "displayLabels": [
+          "percent"
+        ],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"time\", sum(\"SecsInZone\") AS \"Zone 1\" FROM \"StrengthHRZones\" WHERE \"ZoneNumber\" = 1 AND $__timeFilter(time) HAVING count(\"SecsInZone\") > 0"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"time\", sum(\"SecsInZone\") AS \"Zone 2\" FROM \"StrengthHRZones\" WHERE \"ZoneNumber\" = 2 AND $__timeFilter(time) HAVING count(\"SecsInZone\") > 0"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"time\", sum(\"SecsInZone\") AS \"Zone 3\" FROM \"StrengthHRZones\" WHERE \"ZoneNumber\" = 3 AND $__timeFilter(time) HAVING count(\"SecsInZone\") > 0"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"time\", sum(\"SecsInZone\") AS \"Zone 4\" FROM \"StrengthHRZones\" WHERE \"ZoneNumber\" = 4 AND $__timeFilter(time) HAVING count(\"SecsInZone\") > 0"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"time\", sum(\"SecsInZone\") AS \"Zone 5\" FROM \"StrengthHRZones\" WHERE \"ZoneNumber\" = 5 AND $__timeFilter(time) HAVING count(\"SecsInZone\") > 0"
+        }
+      ],
+      "title": "HR Zone Time Distribution (Strength Sessions)",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GARMIN_STATS_PG}"
+      },
+      "description": "Total accumulated active-set duration (sum of Duration_s) per exercise in the selected range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 16,
+        "w": 16,
+        "x": 8,
+        "y": 52
+      },
+      "id": 1018,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.7,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "horizontal",
+        "showValue": "never",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 100,
+        "xField": "ExerciseLabel"
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"Time\", \"ExerciseLabel\", sum(\"Duration_s\") AS \"Total Time Under Tension (s)\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) AND \"ExerciseCategory\" = ANY(ARRAY[$ExerciseCategory]::text[]) AND \"ExerciseLabel\" = ANY(ARRAY[$ExerciseLabel]::text[]) GROUP BY 2 ORDER BY 2"
+        }
+      ],
+      "title": "Time Under Tension by Exercise",
+      "type": "barchart"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 68
+      },
+      "id": 1019,
+      "panels": [],
+      "title": "Consistency & Data Quality",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GARMIN_STATS_PG}"
+      },
+      "description": "Count of training days bucketed into weekly bins. fill(0) is intentional here: a week with no workout genuinely has zero, not missing data.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 0,
+        "y": 69
+      },
+      "id": 1020,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.7,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "never",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 100
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH d AS (SELECT date_bin('1 day', time, TIMESTAMPTZ '1970-01-01 00:00:00+00') AS day, sum(\"Reps\" * \"Weight_kg\") AS dvol FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) GROUP BY 1) SELECT w.time, count(d.dvol) AS \"Workouts\" FROM generate_series((SELECT date_bin('1 week', min(day) FILTER (WHERE dvol IS NOT NULL), TIMESTAMPTZ '1970-01-01 00:00:00+00') FROM d), $__timeTo()::timestamptz, interval '1 week') AS w(time) LEFT JOIN d ON d.day >= w.time AND d.day < w.time + interval '1 week' GROUP BY 1 ORDER BY 1"
+        }
+      ],
+      "title": "Workouts per Week",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GARMIN_STATS_PG}"
+      },
+      "description": "One cell per calendar day: green = at least one weighted set logged that day, gray = rest day.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineWidth": 0,
+            "spanNulls": false
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Rest",
+                  "color": "#343434",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 1e-07,
+                "to": 1000000,
+                "result": {
+                  "text": "Workout",
+                  "color": "semi-dark-green",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 9,
+        "y": 69
+      },
+      "id": 1021,
+      "options": {
+        "alignValue": "center",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "mergeValues": true,
+        "rowHeight": 0.9,
+        "showValue": "never",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeGroupAlias(time, '1d', 0), count(\"Reps\") AS \"Workout\" FROM \"StrengthExerciseSet\" WHERE \"Weight_kg\" > 0 AND \"ExerciseLabel\" <> 'ROW/INDOOR_ROW' AND \"ExerciseCategory\" <> 'RUN' AND $__timeFilter(time) GROUP BY 1 ORDER BY 1"
+        }
+      ],
+      "title": "Workout Calendar",
+      "type": "state-timeline"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_GARMIN_STATS_PG}"
+      },
+      "description": "Sets Garmin could not classify into an exercise (ExerciseCategory=UNKNOWN). Not dropped from other panels, but flagged here \u2014 fix labels in Garmin Connect to improve categorization.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 69
+      },
+      "id": 1022,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_GARMIN_STATS_PG}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeFrom()::timestamptz AS \"time\", count(\"Reps\") AS \"Unknown\" FROM \"StrengthExerciseSet\" WHERE \"ExerciseCategory\" = 'UNKNOWN' AND $__timeFilter(time) HAVING count(\"Reps\") > 0"
+        }
+      ],
+      "title": "Sets Needing Classification (UNKNOWN)",
+      "transparent": true,
+      "type": "stat"
+    }
+  ],
+  "preload": false,
+  "refresh": "1h",
+  "schemaVersion": 41,
+  "style": null,
+  "tags": [
+    "garmin",
+    "strength",
+    "weightlifting"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "includeAll": false,
+        "multi": false,
+        "name": "DS_GARMIN_STATS_PG",
+        "label": "Data source",
+        "options": [],
+        "query": "grafana-postgresql-datasource",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
+        "allowCustomValue": false,
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_GARMIN_STATS_PG}"
+        },
+        "definition": "SELECT DISTINCT \"ExerciseCategory\" FROM \"StrengthExerciseSet\" ORDER BY 1",
+        "includeAll": true,
+        "multi": true,
+        "name": "ExerciseCategory",
+        "label": "Exercise Category",
+        "options": [],
+        "query": "SELECT DISTINCT \"ExerciseCategory\" FROM \"StrengthExerciseSet\" ORDER BY 1",
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allowCustomValue": false,
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_GARMIN_STATS_PG}"
+        },
+        "definition": "SELECT DISTINCT \"ExerciseLabel\" FROM \"StrengthExerciseSet\" WHERE \"ExerciseCategory\" = ANY(ARRAY[$ExerciseCategory]::text[]) ORDER BY 1",
+        "includeAll": true,
+        "multi": true,
+        "name": "ExerciseLabel",
+        "label": "Exercise",
+        "options": [],
+        "query": "SELECT DISTINCT \"ExerciseLabel\" FROM \"StrengthExerciseSet\" WHERE \"ExerciseCategory\" = ANY(ARRAY[$ExerciseCategory]::text[]) ORDER BY 1",
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6M",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Garmin Strength Training Dashboard (PostgreSQL)",
+  "uid": "garmin-strength-training-pg",
+  "version": 1,
+  "weekStart": ""
+}
