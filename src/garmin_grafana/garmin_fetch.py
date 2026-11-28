@@ -2,6 +2,7 @@
 import traceback
 import re
 import base64, requests, time, pytz, logging, os, sys, dotenv, io, zipfile
+import ssl
 from fitparse import FitFile, FitParseError
 from datetime import datetime, timedelta
 from influxdb import InfluxDBClient
@@ -171,37 +172,94 @@ def garmin_login():
             token_store,
         )
 
-    try:
-        logging.info(f"Trying to login to Garmin Connect using token data from '{token_store}'...")
-        garmin = Garmin()
-        garmin.login(token_store)
-        logging.info("Login to Garmin Connect successful using stored session tokens.")
-
-    except (FileNotFoundError, GarminConnectAuthenticationError, GarminConnectConnectionError):
-        logging.warning("Session is expired or login information not present/incorrect. You'll need to log in again...login with your Garmin Connect credentials to generate them.")
+    retry_wait = LOGIN_NETWORK_RETRY_START_SECONDS
+    while True:
         try:
-            user_email = (GARMINCONNECT_EMAIL or "").strip() or input("Enter Garminconnect Login e-mail: ").strip()
-            user_password = (GARMINCONNECT_PASSWORD or "").strip() or input("Enter Garminconnect password (characters will be visible): ").strip()
-            garmin = Garmin(
-                email=user_email, password=user_password, is_cn=GARMINCONNECT_IS_CN,
-                prompt_mfa=lambda: input("MFA one-time code (via email or SMS): ").strip(),
-            )
+            logging.info(f"Trying to login to Garmin Connect using token data from '{token_store}'...")
+            garmin = Garmin()
             garmin.login(token_store)
+            logging.info("Login to Garmin Connect successful using stored session tokens.")
+            return garmin
+        except (FileNotFoundError, GarminConnectAuthenticationError, GarminConnectConnectionError) as err:
+            if not _is_network_error(err):
+                break
+            # garminconnect reports some network failures (connection refused, SSL EOF, timeouts) as
+            # authentication errors. The stored tokens were not rejected, so wait and try them again
+            # instead of starting a credential login that cannot complete without a terminal.
+            logging.warning(
+                f"Network error while logging in with stored tokens ({_root_cause(err)}). "
+                f"The tokens were not rejected - retrying in {retry_wait} seconds..."
+            )
+            time.sleep(retry_wait)
+            retry_wait = min(retry_wait * 2, LOGIN_NETWORK_RETRY_MAX_SECONDS)
 
-            logging.info(f"Oauth tokens stored in '{token_store}' for future use")
-            logging.info("login to Garmin Connect successful using credentials and MFA (if enabled). Continuing with current run")
+    logging.warning("Session is expired or login information not present/incorrect. You'll need to log in again...login with your Garmin Connect credentials to generate them.")
+    try:
+        user_email = (GARMINCONNECT_EMAIL or "").strip() or _prompt("Enter Garminconnect Login e-mail: ")
+        user_password = (GARMINCONNECT_PASSWORD or "").strip() or _prompt("Enter Garminconnect password (characters will be visible): ")
+        garmin = Garmin(
+            email=user_email, password=user_password, is_cn=GARMINCONNECT_IS_CN,
+            prompt_mfa=lambda: _prompt("MFA one-time code (via email or SMS): "),
+        )
+        garmin.login(token_store)
 
-        except (
-            FileNotFoundError,
-            GarminConnectConnectionError,
-            GarminConnectAuthenticationError,
-            GarminConnectTooManyRequestsError,
-            requests.exceptions.HTTPError,
-        ) as err:
-            logging.error(str(err))
-            raise Exception("Garmin login failed after credential/MFA attempt")
+        logging.info(f"Oauth tokens stored in '{token_store}' for future use")
+        logging.info("login to Garmin Connect successful using credentials and MFA (if enabled). Continuing with current run")
+
+    except (
+        FileNotFoundError,
+        GarminConnectConnectionError,
+        GarminConnectAuthenticationError,
+        GarminConnectTooManyRequestsError,
+        requests.exceptions.HTTPError,
+    ) as err:
+        logging.error(str(err))
+        raise Exception("Garmin login failed after credential/MFA attempt")
 
     return garmin
+
+
+LOGIN_NETWORK_RETRY_START_SECONDS = 30
+LOGIN_NETWORK_RETRY_MAX_SECONDS = 600
+_NETWORK_ERROR_TYPES = (
+    requests.exceptions.ConnectionError,  # includes requests.exceptions.SSLError
+    requests.exceptions.Timeout,
+    ssl.SSLError,
+    ConnectionError,
+    TimeoutError,
+)
+
+
+def _exception_chain(err):
+    """Yield err and the exceptions it was raised from (``raise ... from ...`` or implicit context)."""
+    seen = set()
+    while err is not None and id(err) not in seen:
+        seen.add(id(err))
+        yield err
+        err = err.__cause__ if err.__cause__ is not None else (None if err.__suppress_context__ else err.__context__)
+
+
+def _is_network_error(err):
+    """True when a login failure was caused by the network (refused, reset, SSL EOF, timeout), not by rejected tokens."""
+    return any(isinstance(e, _NETWORK_ERROR_TYPES) for e in _exception_chain(err))
+
+
+def _root_cause(err):
+    last = err
+    for last in _exception_chain(err):
+        pass
+    return f"{type(last).__name__}: {str(last)[:200]}"
+
+
+def _prompt(message):
+    """input() that fails with a clear message instead of EOFError when there is no terminal (e.g. a detached container)."""
+    if sys.stdin is None or not sys.stdin.isatty():
+        raise RuntimeError(
+            "Garmin Connect login needs your credentials, but no interactive terminal is attached. "
+            "Run the container interactively once to log in (for example `docker compose run --rm garmin-fetch-data`), "
+            "or set GARMINCONNECT_EMAIL and GARMINCONNECT_BASE64_PASSWORD."
+        )
+    return input(message).strip()
 
 
 def _is_http_status_error(err, status_code):
